@@ -7,10 +7,10 @@
 		revision="0.1.0"
 		conf="scala-tool"
 		confs="compile, runtime, test, provided, optional, compile-internal, runtime-internal, test-internal, plugin, pom, scala-tool"
-		date="20191113175612"/>
+		date="20191115165456"/>
 	<dependencies>
 		<module organisation="org.scala-lang" name="scala-compiler">
-			<revision name="2.12.10" status="release" pubdate="20190910222217" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://www.scala-lang.org/" downloaded="false" searched="false" default="false" conf="default, compile, runtime, optional, optional(default), master" position="4">
+			<revision name="2.12.10" status="release" pubdate="20190910232217" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://www.scala-lang.org/" downloaded="false" searched="false" default="false" conf="default, compile, runtime, optional, optional(default), master" position="4">
 				<license name="Apache-2.0" url="https://www.apache.org/licenses/LICENSE-2.0"/>
 				<metadata-artifact status="no" details="" size="3064" time="0" location="/home/tim/.ivy2/cache/org.scala-lang/scala-compiler/ivy-2.12.10.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scala-lang/scala-compiler/2.12.10/scala-compiler-2.12.10.pom"/>
 				<caller organisation="com.optrak" name="zio-kafka-registry$sources" conf="scala-tool" rev="2.12.10" rev-constraint-default="2.12.10" rev-constraint-dynamic="2.12.10" callerrev="0.1.0"/>
@@ -24,7 +24,7 @@
 		<module organisation="jline" name="jline">
 			<revision name="2.14.6" status="release" pubdate="20180326101840" resolver="sbt-chain" artresolver="sbt-chain" homepage="" downloaded="false" searched="false" default="false" conf="master(*), compile, compile(*), master" position="5">
 				<license name="The BSD License" url="http://www.opensource.org/licenses/bsd-license.php"/>
-				<metadata-artifact status="no" details="" size="5183" time="0" location="/home/tim/.ivy2/cache/jline/jline/ivy-2.14.6.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/jline/jline/2.14.6/jline-2.14.6.pom"/>
+				<metadata-artifact status="no" details="" size="5033" time="0" location="/home/tim/.ivy2/cache/jline/jline/ivy-2.14.6.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/jline/jline/2.14.6/jline-2.14.6.pom"/>
 				<caller organisation="com.optrak" name="zio-kafka-registry$sources" conf="scala-tool" rev="2.14.6" rev-constraint-default="2.14.6" rev-constraint-dynamic="2.14.6" callerrev="0.1.0"/>
 				<artifacts>
 					<artifact name="jline" type="src" ext="jar" extra-classifier="sources" status="no" details="" size="110450" time="0" location="/home/tim/.ivy2/cache/jline/jline/srcs/jline-2.14.6-sources.jar">
@@ -34,7 +34,7 @@
 			</revision>
 		</module>
 		<module organisation="org.scala-lang" name="scala-reflect">
-			<revision name="2.12.10" status="release" pubdate="20190910221922" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://www.scala-lang.org/" extra-info.apiURL="https://www.scala-lang.org/api/2.12.10/" downloaded="false" searched="false" default="false" conf="master(*), compile, runtime(*), runtime, compile(*), master" position="3">
+			<revision name="2.12.10" status="release" pubdate="20190910231922" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://www.scala-lang.org/" extra-info.apiURL="https://www.scala-lang.org/api/2.12.10/" downloaded="false" searched="false" default="false" conf="master(*), compile, runtime(*), runtime, compile(*), master" position="3">
 				<license name="Apache-2.0" url="https://www.apache.org/licenses/LICENSE-2.0"/>
 				<metadata-artifact status="no" details="" size="2645" time="0" location="/home/tim/.ivy2/cache/org.scala-lang/scala-reflect/ivy-2.12.10.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scala-lang/scala-reflect/2.12.10/scala-reflect-2.12.10.pom"/>
 				<caller organisation="com.optrak" name="zio-kafka-registry$sources" conf="scala-tool" rev="2.12.10" rev-constraint-default="2.12.10" rev-constraint-dynamic="2.12.10" callerrev="0.1.0" extra-info.apiURL="https://www.scala-lang.org/api/2.12.10/"/>
@@ -58,7 +58,7 @@
 			</revision>
 		</module>
 		<module organisation="org.scala-lang" name="scala-library">
-			<revision name="2.12.10" status="release" pubdate="20190910222052" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://www.scala-lang.org/" extra-info.apiURL="https://www.scala-lang.org/api/2.12.10/" downloaded="false" searched="false" default="false" conf="default, master(*), compile, runtime(*), runtime, optional, optional(default), compile(*), master" position="1">
+			<revision name="2.12.10" status="release" pubdate="20190910232052" resolver="sbt-chain" artresolver="sbt-chain" homepage="https://www.scala-lang.org/" extra-info.apiURL="https://www.scala-lang.org/api/2.12.10/" downloaded="false" searched="false" default="false" conf="default, master(*), compile, runtime(*), runtime, optional, optional(default), compile(*), master" position="1">
 				<license name="Apache-2.0" url="https://www.apache.org/licenses/LICENSE-2.0"/>
 				<metadata-artifact status="no" details="" size="2478" time="0" location="/home/tim/.ivy2/cache/org.scala-lang/scala-library/ivy-2.12.10.xml" searched="false" origin-is-local="false" origin-location="https://repo1.maven.org/maven2/org/scala-lang/scala-library/2.12.10/scala-library-2.12.10.pom"/>
 				<caller organisation="com.optrak" name="zio-kafka-registry$sources" conf="scala-tool" rev="2.12.10" rev-constraint-default="2.12.10" rev-constraint-dynamic="2.12.10" callerrev="0.1.0" extra-info.apiURL="https://www.scala-lang.org/api/2.12.10/"/>
