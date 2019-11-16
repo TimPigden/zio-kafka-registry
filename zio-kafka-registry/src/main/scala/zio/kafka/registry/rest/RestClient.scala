@@ -2,9 +2,10 @@ package zio.kafka.registry.rest
 
 import org.apache.avro.Schema
 import zio._
+import zio.kafka.registry.rest.RestClient._
 
 trait RestClient {
-  val service: RestClient.Service[Any]
+  val restClient: RestClient.Service[Any]
 }
 
 object RestClient {
@@ -12,7 +13,7 @@ object RestClient {
 
   case class WrappedSchema(subject: String, id: Int, version: Int, schema: Schema)
 
-  type RestResponse[T] = ZIO[ZEnv, SchemaError, T]
+  type RestResponse[T] = Task[T]
 
   sealed trait CompatibilityLevel
   case object Backward extends CompatibilityLevel
@@ -42,11 +43,13 @@ object RestClient {
 
     def subjectVersions(subject: String): RestResponse[List[Int]]
 
-    def deleteSubject(string: String): RestResponse[List[Int]]
+    def deleteSubject(subject: String): RestResponse[List[Int]]
 
-    def version(subject: String, versionId: Int): RestResponse[List[WrappedSchema]]
-
-    def schema(subject: String, versionId: Int): RestResponse[Schema]
+    /**
+     * @param subject
+     * @param versionId if versionId = None uses latest
+     */
+    def version(subject: String, versionId: Option[Int]): RestResponse[WrappedSchema]
 
     def postSchema(subject: String, schema: Schema): RestResponse[Int]
 
@@ -65,4 +68,65 @@ object RestClient {
     def config(subject: String): RestResponse[CompatibilityLevel]
   }
 
+}
+
+case class RestClientImpl(abstractClient: AbstractClient) extends RestClient.Service[Any] {
+  import Serializers._
+
+  override def schema(id: Int): RestResponse[Schema] =
+    abstractClient.get(Urls.schema(id))
+
+  override def subjects: RestResponse[List[String]] =
+    abstractClient.get(Urls.subjects)
+
+  override def subjectVersions(subject: String): RestResponse[List[Int]] =
+    abstractClient.get(Urls.subjectVersions(subject))
+
+  override def deleteSubject(subject: String): RestResponse[List[Int]] =
+    abstractClient.delete(Urls.deleteSubject(subject))
+
+  /**
+   * @param subject
+   * @param versionId if versionId = None uses latest
+   */
+  override def version(subject: String, versionId: Option[Int]): RestResponse[RestClient.WrappedSchema] =
+    abstractClient.get(Urls.version(subject, versionId))
+
+  override def postSchema(subject: String, schema: Schema): RestResponse[Int] =
+    abstractClient.post(Urls.postSchema(subject), schema)
+
+  override def alreadyPresent(subject: String, schema: Schema): RestResponse[Option[RestClient.WrappedSchema]] = {
+    val opt = abstractClient.post[Schema, RestClient.WrappedSchema](Urls.alreadyPresent(subject), schema)
+    for {
+      res <- opt.either.map {
+        case Left(err) => err match {
+          case SchemaError(errorCode, message) =>
+            if (errorCode == 40403) IO.succeed(Option.empty[RestClient.WrappedSchema])
+            else IO.fail(err)
+          case _ => IO.fail(err)
+        }
+        case Right(ok) => IO.succeed(Some(ok))
+      }
+      f <- res
+    } yield f
+  }
+
+  override def delete(subject: String, versionId: Int): RestResponse[Unit] =
+    abstractClient.delete[String](Urls.delete(subject, versionId)).map(_ => ())
+
+  override def compatible(subject: String, versionId: Int, schema: Schema): RestResponse[Boolean] =
+    abstractClient.post(Urls.compatible(subject, versionId), schema)
+
+  override def setConfig(compatibilityLevel: CompatibilityLevel): RestResponse[Unit] =
+    abstractClient.put[CompatibilityLevel, CompatibilityLevel](Urls.setConfig, compatibilityLevel).map(_ => ())
+
+  override def config: RestResponse[CompatibilityLevel] =
+    abstractClient.get(Urls.config)
+
+  override def setConfig(subject: String, compatibilityLevel: CompatibilityLevel): RestResponse[Unit] =
+    abstractClient.put[CompatibilityLevel, CompatibilityLevel](Urls.setConfig(subject), compatibilityLevel)
+    .map(_ => ())
+
+  override def config(subject: String): RestResponse[CompatibilityLevel] =
+    abstractClient.get(Urls.config(subject))
 }

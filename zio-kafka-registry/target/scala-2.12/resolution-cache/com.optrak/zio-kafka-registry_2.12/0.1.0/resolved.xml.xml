@@ -4,7 +4,7 @@
 		module="zio-kafka-registry_2.12"
 		revision="0.1.0"
 		status="integration"
-		publication="20191115165454"
+		publication="20191116115210"
 	>
 		<description>
 		zio-kafka-registry
@@ -38,11 +38,12 @@
 		<dependency org="org.apache.avro" name="avro" rev="1.9.1" conf="compile->default(compile)"/>
 		<dependency org="dev.zio" name="zio_2.12" rev="1.0.0-RC16" conf="compile->default(compile)"/>
 		<dependency org="dev.zio" name="zio-interop-cats_2.12" rev="2.0.0.0-RC7" conf="compile->default(compile)"/>
+		<dependency org="org.typelevel" name="cats-effect_2.12" rev="2.0.0" conf="compile->default(compile)"/>
 		<dependency org="dev.zio" name="zio-test_2.12" rev="1.0.0-RC16" conf="test->default(compile)"/>
 		<dependency org="dev.zio" name="zio-kafka_2.12" rev="0.4.0" conf="compile->default(compile)"/>
 		<dependency org="io.github.embeddedkafka" name="embedded-kafka-schema-registry_2.12" rev="5.3.1" conf="test->default(compile)"/>
 		<dependency org="org.xerial.snappy" name="snappy-java" rev="1.1.7.3" conf="compile->default(compile)"/>
-		<dependency org="org.http4s" name="http4s-blaze-client_2.12" rev="0.20.10" conf="compile->default(compile)"/>
+		<dependency org="org.http4s" name="http4s-blaze-client_2.12" rev="0.20.13" conf="compile->default(compile)"/>
 		<dependency org="io.confluent" name="kafka-avro-serializer" rev="5.3.1" conf="compile->default(compile)"/>
 		<dependency org="com.propensive" name="magnolia_2.12" rev="0.12.0" conf="compile->default(compile)"/>
 	</dependencies>

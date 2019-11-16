@@ -52,12 +52,11 @@ lazy val zio = "dev.zio" %% "zio" %  `zio-version`
 lazy val `zio-kafka` = "dev.zio" %% "zio-kafka"   % `zio-kafka-version`
 lazy val `zio-test` = "dev.zio" %% "zio-test" % `zio-version` % "test"
 lazy val `zio-test-sbt` = "dev.zio" %% "zio-test-sbt" % `zio-version` % "test"
-lazy val `zio-interop-shared` = "dev.zio" %% "zio-interop-shared" % `zio-version`
 lazy val `zio-interop-cats` = "dev.zio" %% "zio-interop-cats" % `zio-interop`
 lazy val `embedded-kafka-schema` = "io.github.embeddedkafka" %% "embedded-kafka-schema-registry" % "5.3.1" % "test"
 lazy val `embedded-kafka` = "io.github.embeddedkafka" %% "embedded-kafka" % "2.3.1" % "test"
 
-lazy val Http4sVersion = "0.20.10"
+lazy val Http4sVersion = "0.20.13"
 lazy val http4sBlazeClient = "org.http4s"  %% "http4s-blaze-client" % Http4sVersion
 
 lazy val avro = "org.apache.avro" % "avro" % "1.9.1"
@@ -88,6 +87,7 @@ lazy val `zio-kafka-registry` = (project in file ("zio-kafka-registry"))
     avro,
     zio,
     `zio-interop-cats`,
+    catsEffect,
     `zio-test`,
     `zio-kafka`,
     `embedded-kafka-schema`,

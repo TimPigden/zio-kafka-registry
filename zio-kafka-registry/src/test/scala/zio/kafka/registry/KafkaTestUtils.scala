@@ -13,6 +13,7 @@ import zio.random.Random
 import zio.test.environment.{Live, TestEnvironment}
 import Kafka._
 import zio.kafka.client._
+import zio.kafka.registry.rest.{RestClient, RestClientImpl}
 
 trait Kafka {
   def kafka: Kafka.Service
@@ -26,9 +27,10 @@ object Kafka {
 
   // documented constants (not sure how to get them programmatically)
 
+  val schemaRegistryPort = 6002
+
   case class EmbeddedKafkaService(embeddedK: EmbeddedKWithSR) extends Kafka.Service {
     private val kafkaPort = 6001
-    private val schemaRegistryPort = 6002
     override def bootstrapServers: List[String] = List(s"localhost:$kafkaPort")
     override def stop(): UIO[Unit]              = ZIO.effectTotal(embeddedK.stop(true))
   }
@@ -49,7 +51,7 @@ object Kafka {
       override val kafka: Service = DefaultLocal
     }))(_.kafka.stop())
 
-  type KafkaTestEnvironment = Kafka with TestEnvironment
+  type KafkaTestEnvironment = Kafka with TestEnvironment with RestClient
 
   type KafkaClockBlocking = Kafka with Clock with Blocking
 
@@ -69,10 +71,11 @@ object Kafka {
 
 object KafkaTestUtils {
 
-  def kafkaEnvironment(kafkaE: Managed[Nothing, Kafka]): Managed[Nothing, KafkaTestEnvironment] =
+  def kafkaEnvironment(kafkaE: Managed[Nothing, Kafka]): Managed[Throwable, KafkaTestEnvironment] =
     for {
       testEnvironment <- TestEnvironment.Value
       kafkaS          <- kafkaE
+      http4sClient <-  Http4sClient.make
     } yield new TestEnvironment(
       testEnvironment.blocking,
       testEnvironment.clock,
@@ -81,14 +84,16 @@ object KafkaTestUtils {
       testEnvironment.random,
       testEnvironment.sized,
       testEnvironment.system
-    ) with Kafka {
+    ) with Kafka with RestClient {
       val kafka = kafkaS.kafka
+      val restClient = RestClientImpl(Http4sClient(http4sClient))
     }
 
-  val embeddedKafkaEnvironment: Managed[Nothing, KafkaTestEnvironment] =
+
+  val embeddedKafkaEnvironment: Managed[Throwable, KafkaTestEnvironment] =
     kafkaEnvironment(Kafka.makeEmbedded)
 
-  val localKafkaEnvironment: Managed[Nothing, KafkaTestEnvironment] =
+  val localKafkaEnvironment: Managed[Throwable, KafkaTestEnvironment] =
     kafkaEnvironment(Kafka.makeLocal)
 
   def producerSettings =

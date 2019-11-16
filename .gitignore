@@ -16,6 +16,7 @@ bin
 .settings
 logs/
 log/
+target/
 outputs/
 .idea/
 *.swp

@@ -13,13 +13,14 @@ object Urls {
 
   def deleteSubject(subject: String): String = s"/subjects/$subject"
 
-  def version(subject: String, versionId: Int): String = s"/subjects/$subject/versions/$versionId"
-
-  def schema(subject: String, versionId: Int): String = s"/subjects/$subject/versions/$versionId/schema"
+  def version(subject: String, versionId: Option[Int]): String = {
+    val vs = versionId.fold("latest")(_.toString)
+    s"/subjects/$subject/versions/$vs"
+  }
 
   def postSchema(subject: String): String = s"/subjects/$subject/versions"
 
-  def alreadyPresent(subject: String): String = s"s/subjects/$subject"
+  def alreadyPresent(subject: String): String = s"/subjects/$subject"
 
   def delete(subject: String, versionId: Int): String = s"/subjects/$subject/versions/$versionId"
 
