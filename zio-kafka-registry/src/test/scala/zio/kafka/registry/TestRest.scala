@@ -8,11 +8,16 @@ import zio.avro.magnolia.SimpleSchemaGenerator._
 import Assertion._
 import TestRestSupport._
 import KafkaTestUtils._
-import zio.kafka.registry.rest.RestClient.CompatibilityLevel
+import zio.kafka.registry.rest.RestClient.{Backward, CompatibilityLevel}
 
 object TestRest extends DefaultRunnableSpec(
   suite("test rest  interface")(
-    testSubjects, testDelete, modifyCompatibility
+     testSubjects,
+     testDelete,
+     modifyCompatibility,
+    checkDeleteSubject,
+     multipleSchemas,
+    compatibleSchemas,
   ).provideManagedShared(embeddedKafkaEnvironment)
 )
 
@@ -32,13 +37,15 @@ object TestRestSupport {
       initial <- restClient.subjects
       posted <-  restClient.postSchema(subject, schema1)
       already <- restClient.alreadyPresent(subject, schema1)
+      schemaBack <- restClient.schema(posted)
       later <- restClient.subjects
     } yield {
       assert(initial, not(contains(subject))) &&
         assert(later, contains(subject)) &&
       assert(posted, equalTo(1)) &&
-      assert(already,not (equalTo(None)))
-      assert(already.get.schema, equalTo(schema1))
+      assert(already,not (equalTo(None))) &&
+      assert(already.get.schema, equalTo(schema1)) &&
+        assert(schemaBack, equalTo(schema1))
     }
   }
 
@@ -56,9 +63,51 @@ object TestRestSupport {
       assert(initial, not(contains(subject))) &&
         assert(later, contains(subject)) &&
         assert(posted, equalTo(1)) &&
-      assert(laterStill, equalTo(List.empty[String]))
+      assert(laterStill, not(contains(subject)))
     }
   }
+
+  val checkDeleteSubject = testM("delete whole subject"){
+    val subject = "morepresidents2"
+    for {
+      rc <- ZIO.environment[RestClient]
+      restClient = rc.restClient
+      posted <-  restClient.postSchema(subject, schema1)
+      later <- restClient.subjects
+      _ <- restClient.deleteSubject(subject)
+      laterStill <- restClient.subjects
+    } yield {
+        assert(later, contains(subject)) &&
+        assert(posted, equalTo(1)) &&
+        assert(laterStill, not(contains(subject)))
+    }
+  }
+
+  val multipleSchemas = testM("test with multiple schemas in same subject"){
+    val subject = "presidents3"
+    for {
+      rc <- ZIO.environment[RestClient]
+      restClient = rc.restClient
+      _ <-  restClient.postSchema(subject, schema1)
+      _ <-  restClient.postSchema(subject, schema2)
+      versions <- restClient.subjectVersions(subject)
+    } yield {
+      assert(versions, equalTo(List(1, 2)))
+    }
+  }
+
+  val compatibleSchemas = testM("schema1 and 2 are compatible"){
+    val subject = "presidents4"
+    for {
+      rc <- ZIO.environment[RestClient]
+      restClient = rc.restClient
+      _ <- restClient.postSchema(subject, schema1)
+      compat <- restClient.compatible(subject, 1, schema2)
+    } yield {
+      assert(compat, equalTo(true))
+    }
+  }
+
 
   def checkAll(testResults: Iterable[TestResult]) =
     testResults.tail.foldLeft(testResults.head)((acc, it) => acc && it)
@@ -89,5 +138,7 @@ object TestRestSupport {
     }
 
   }
+
+
 
 }

@@ -34,7 +34,7 @@ object Serializers {
    * "schema": "{\"type\": \"string\"}"
    * }
    */
-  implicit def parseSchema(s:String): Task[Schema] = IO.effect {
+  implicit def parseSchema(s: String): Task[Schema] = IO.effect {
     val schemaString: String = (for {
       JObject(jobj) <- parse(s)
       JField("schema", JString(schemaStrings)) <- jobj
@@ -62,21 +62,21 @@ object Serializers {
     (for {
       JArray(items) <- parse(s)
     } yield items).head.map { case JInt(s) => s.toInt
-      case _ => throw new ParseException("expected ints as versions", 0)
+    case _ => throw new ParseException("expected ints as versions", 0)
     }
   }
 
-  implicit def parseWrappedSchema(s:String): Task[WrappedSchema] = parseSchema(s).map { schema =>
+  implicit def parseWrappedSchema(s: String): Task[WrappedSchema] = parseSchema(s).map { schema =>
     println(s"parsedWrappedSchmea $s")
-      (for {
-        JObject(jobj) <- parse(s)
-        JField("version", JInt(version)) <- jobj
-        JField("subject", JString(subject)) <- jobj
-        JField("id", JInt(id)) <- jobj
-      } yield WrappedSchema(subject, id.toInt, version.toInt, schema)).head
+    (for {
+      JObject(jobj) <- parse(s)
+      JField("version", JInt(version)) <- jobj
+      JField("subject", JString(subject)) <- jobj
+      JField("id", JInt(id)) <- jobj
+    } yield WrappedSchema(subject, id.toInt, version.toInt, schema)).head
   }
 
-  implicit def parseId(s: String):Task[Int] = IO.effect {
+  implicit def parseId(s: String): Task[Int] = IO.effect {
     (for {
       JObject(jobj) <- parse(s)
       JField("id", JInt(id)) <- jobj
@@ -85,21 +85,29 @@ object Serializers {
 
   implicit def writeSchema(schema: Schema): String = {
     val asString = schema.toString
-    val jv = JObject("schema"-> JString(asString))
+    val jv = JObject("schema" -> JString(asString))
     compact(jv)
   }
 
-  implicit def writeCompatibilityLevel(compatibilityLevel: CompatibilityLevel): String =
-    CompatibilityLevel.values(compatibilityLevel)
+  implicit def writeCompatibilityLevel(compatibilityLevel: CompatibilityLevel): String = {
+  val jv = JObject("compatibility" -> JString(CompatibilityLevel.values(compatibilityLevel)))
+  compact(jv)
+}
 
-  implicit def parseCompatibilityLevel(s: String): Task[CompatibilityLevel] = IO.effect {
-    CompatibilityLevel.values.find(_._2 == s).get._1
+  def parseCompatibilityLevel(asPut: Boolean)(s: String): Task[CompatibilityLevel] = IO.effect {
+    println(s"parse compatibilityLevel $s")
+    val cString = if (asPut)
+      "compatibility" else "compatibilityLevel"
+    (for {
+      JObject(jObj) <- parse(s)
+      JField(cString, JString(level)) <- jObj
+    } yield CompatibilityLevel.values.find(_._2 == level).get._1).head
   }
 
   implicit def parseIsCompatible(s: String):Task[Boolean] = IO.effect {
     (for {
       JObject(jobj) <- parse(s)
-      JField("id", JBool(id)) <- jobj
+      JField("is_compatible", JBool(id)) <- jobj
     } yield id).head
   }
 

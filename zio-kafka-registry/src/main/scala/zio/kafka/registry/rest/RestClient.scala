@@ -117,16 +117,24 @@ case class RestClientImpl(abstractClient: AbstractClient) extends RestClient.Ser
   override def compatible(subject: String, versionId: Int, schema: Schema): RestResponse[Boolean] =
     abstractClient.post(Urls.compatible(subject, versionId), schema)
 
-  override def setConfig(compatibilityLevel: CompatibilityLevel): RestResponse[Unit] =
+  override def setConfig(compatibilityLevel: CompatibilityLevel): RestResponse[Unit] = {
+    implicit val pc = parseCompatibilityLevel(true) _
     abstractClient.put[CompatibilityLevel, CompatibilityLevel](Urls.setConfig, compatibilityLevel).map(_ => ())
+  }
 
-  override def config: RestResponse[CompatibilityLevel] =
+  override def config: RestResponse[CompatibilityLevel] = {
+    implicit val pc = parseCompatibilityLevel(false) _
     abstractClient.get(Urls.config)
+  }
 
-  override def setConfig(subject: String, compatibilityLevel: CompatibilityLevel): RestResponse[Unit] =
+  override def setConfig(subject: String, compatibilityLevel: CompatibilityLevel): RestResponse[Unit] = {
+    implicit val pc = parseCompatibilityLevel(true) _
     abstractClient.put[CompatibilityLevel, CompatibilityLevel](Urls.setConfig(subject), compatibilityLevel)
-    .map(_ => ())
+      .map(_ => ())
+  }
 
-  override def config(subject: String): RestResponse[CompatibilityLevel] =
+  override def config(subject: String): RestResponse[CompatibilityLevel] = {
+    implicit val pc = parseCompatibilityLevel(true) _
     abstractClient.get(Urls.config(subject))
+  }
 }
