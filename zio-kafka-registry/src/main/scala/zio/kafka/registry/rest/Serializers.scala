@@ -21,7 +21,6 @@ object Serializers {
    * }
    */
   implicit def parseSchemaError(s: String): Task[SchemaError] = IO.effect {
-    println(s"parseChemaError $s")
     (for {
       JObject(jobj) <- parse(s)
       JField("error_code", JInt(errorCode)) <- jobj
@@ -67,7 +66,6 @@ object Serializers {
   }
 
   implicit def parseWrappedSchema(s: String): Task[WrappedSchema] = parseSchema(s).map { schema =>
-    println(s"parsedWrappedSchmea $s")
     (for {
       JObject(jobj) <- parse(s)
       JField("version", JInt(version)) <- jobj
@@ -95,7 +93,6 @@ object Serializers {
 }
 
   def parseCompatibilityLevel(asPut: Boolean)(s: String): Task[CompatibilityLevel] = IO.effect {
-    println(s"parse compatibilityLevel $s")
     val cString = if (asPut)
       "compatibility" else "compatibilityLevel"
     (for {

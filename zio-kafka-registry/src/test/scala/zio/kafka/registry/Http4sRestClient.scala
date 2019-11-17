@@ -18,7 +18,6 @@ object Http4sClient {
 
   def uri(path: String) = {
     val res = Uri.unsafeFromString(s"http://localhost:$schemaRegistryPort$path")
-    println(s"res is $res")
     res
   }
 
@@ -59,7 +58,6 @@ case class Http4sClient(client: Client[Task]) extends AbstractClient {
 
   def inOut[In, Out](method: Method, url: String, in: In)(implicit inWriter: In => String, outParser: String => Task[Out]): RestResponse[Out] = {
     val asString = inWriter(in)
-    println(s"for $method :  $url : $asString")
     val req = Request[Task](method, uri(url))
       .withEntity[String](asString)
       .withContentType(`Content-Type`(media))
