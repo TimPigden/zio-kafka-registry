@@ -8,10 +8,11 @@ import zio.avro.magnolia.SimpleSchemaGenerator._
 import Assertion._
 import TestRestSupport._
 import KafkaTestUtils._
+import zio.kafka.registry.rest.RestClient.CompatibilityLevel
 
 object TestRest extends DefaultRunnableSpec(
   suite("test rest  interface")(
-    testSubjects, testDelete
+    testSubjects, testDelete, modifyCompatibility
   ).provideManagedShared(embeddedKafkaEnvironment)
 )
 
@@ -57,6 +58,36 @@ object TestRestSupport {
         assert(posted, equalTo(1)) &&
       assert(laterStill, equalTo(List.empty[String]))
     }
+  }
+
+  def checkAll(testResults: Iterable[TestResult]) =
+    testResults.tail.foldLeft(testResults.head)((acc, it) => acc && it)
+
+  val modifyCompatibility = testM("modify compatibility and check") {
+
+    val subject = "presidents"
+    def setCheck(restClient: RestClient.Service[Any], compat: CompatibilityLevel) =
+      for {
+        _ <- restClient.setConfig(compat)
+        check <- restClient.config
+      } yield assert(check, equalTo(compat))
+
+    def setCheck2(restClient: RestClient.Service[Any], compat: CompatibilityLevel) =
+      for {
+        _ <- restClient.setConfig(subject, compat)
+        check <- restClient.config(subject)
+      } yield assert(check, equalTo(compat))
+
+    for {
+      rc <- ZIO.environment[RestClient]
+      restClient = rc.restClient
+      general <- ZIO.collectAll(CompatibilityLevel.values.keySet.map { compat => setCheck(restClient, compat)})
+      bySubject<- ZIO.collectAll(CompatibilityLevel.values.keySet.map { compat => setCheck2(restClient, compat)})
+    } yield {
+      checkAll(general) &&
+      checkAll(bySubject)
+    }
+
   }
 
 }
