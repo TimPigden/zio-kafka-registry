@@ -12,6 +12,7 @@ import zio.kafka.client.AdminClient.KafkaAdminClientConfig
 import zio.random.Random
 import zio.test.environment.{Live, TestEnvironment}
 import Kafka._
+import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig
 import zio.kafka.client._
 import zio.kafka.registry.rest.{RestClient, RestClientImpl}
 
@@ -22,21 +23,24 @@ trait Kafka {
 object Kafka {
   trait Service {
     def bootstrapServers: List[String]
+    def registryServer: String
     def stop(): UIO[Unit]
   }
 
   // documented constants (not sure how to get them programmatically)
 
-  val schemaRegistryPort = 6002
 
   case class EmbeddedKafkaService(embeddedK: EmbeddedKWithSR) extends Kafka.Service {
     private val kafkaPort = 6001
+    val schemaRegistryPort = 6002
     override def bootstrapServers: List[String] = List(s"localhost:$kafkaPort")
+    override def registryServer: String = s"localhost:$schemaRegistryPort"
     override def stop(): UIO[Unit]              = ZIO.effectTotal(embeddedK.stop(true))
   }
 
   case object DefaultLocal extends Kafka.Service {
     override def bootstrapServers: List[String] = List(s"localhost:9092")
+    override def registryServer: String = s"http://localhost:8081"
 
     override def stop(): UIO[Unit] = UIO.unit
   }
@@ -86,7 +90,7 @@ object KafkaTestUtils {
       testEnvironment.system
     ) with Kafka with RestClient {
       val kafka = kafkaS.kafka
-      val restClient = RestClientImpl(Http4sClient(http4sClient))
+      val restClient = RestClientImpl(Http4sClient(http4sClient, kafka.registryServer))
     }
 
 
@@ -96,13 +100,14 @@ object KafkaTestUtils {
   val localKafkaEnvironment: Managed[Throwable, KafkaTestEnvironment] =
     kafkaEnvironment(Kafka.makeLocal)
 
-  def producerSettings =
+  def registryProducerSettings =
     for {
       servers <- ZIO.access[Kafka](_.kafka.bootstrapServers)
+      registry <- ZIO.access[Kafka](_.kafka.registryServer)
     } yield ProducerSettings(
       servers,
       5.seconds,
-      Map.empty
+      Map(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG -> registry)
     )
 
   def withProducer[A, K, V](
@@ -111,7 +116,7 @@ object KafkaTestUtils {
     vSerde: Serde[Any, V]
   ): RIO[KafkaTestEnvironment, A] =
     for {
-      settings <- producerSettings
+      settings <- registryProducerSettings
       producer = Producer.make(settings, kSerde, vSerde)
       lcb      <- Kafka.liveClockBlocking
       produced <- producer.use { p =>
@@ -119,35 +124,10 @@ object KafkaTestUtils {
                  }
     } yield produced
 
-  def withProducerStrings[A](r: Producer[Any, String, String] => RIO[Any with Clock with Kafka with Blocking, A]) =
-    withProducer(r, Serde.string, Serde.string)
-
-  def produceOne(t: String, k: String, m: String) =
-    withProducerStrings { p =>
-      p.produce(new ProducerRecord(t, k, m))
-    }
-
-  def produceMany(t: String, kvs: Iterable[(String, String)]) =
-    withProducerStrings { p =>
-      val records = kvs.map {
-        case (k, v) => new ProducerRecord[String, String](t, k, v)
-      }
-      val chunk = Chunk.fromIterable(records)
-      p.produceChunk(chunk)
-    }
-
-  def produceMany(topic: String, partition: Int, kvs: Iterable[(String, String)]) =
-    withProducerStrings { p =>
-      val records = kvs.map {
-        case (k, v) => new ProducerRecord[String, String](topic, partition, null, k, v)
-      }
-      val chunk = Chunk.fromIterable(records)
-      p.produceChunk(chunk)
-    }
-
   def consumerSettings(groupId: String, clientId: String) =
     for {
       servers <- ZIO.access[Kafka](_.kafka.bootstrapServers)
+      registry <- ZIO.access[Kafka](_.kafka.registryServer)
     } yield ConsumerSettings(
       servers,
       groupId,
@@ -155,7 +135,8 @@ object KafkaTestUtils {
       5.seconds,
       Map(
         ConsumerConfig.AUTO_OFFSET_RESET_CONFIG -> "earliest",
-        ConsumerConfig.METADATA_MAX_AGE_CONFIG  -> "100"
+        ConsumerConfig.METADATA_MAX_AGE_CONFIG  -> "100",
+        AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG -> registry
       ),
       250.millis,
       250.millis,

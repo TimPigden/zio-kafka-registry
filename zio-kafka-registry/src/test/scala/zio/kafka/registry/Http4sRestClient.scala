@@ -12,14 +12,8 @@ import zio.kafka.registry.rest.{AbstractClient, Serializers}
 import zio.kafka.registry.rest.RestClient.{RestResponse, SchemaError}
 import zio.{IO, Task, ZIO, ZManaged}
 import Kafka._
-import Http4sClient.uri
 
 object Http4sClient {
-
-  def uri(path: String) = {
-    val res = Uri.unsafeFromString(s"http://localhost:$schemaRegistryPort$path")
-    res
-  }
 
   def make: ZManaged[Any, Throwable, Client[Task]] = {
     val zioManaged = ZIO.runtime[Any].map { rts =>
@@ -34,7 +28,12 @@ object Http4sClient {
   }
 }
 
-case class Http4sClient(client: Client[Task]) extends AbstractClient {
+case class Http4sClient(client: Client[Task], root: String) extends AbstractClient {
+
+  def uri(path: String) = {
+    val res = Uri.unsafeFromString(s"$root/$path")
+    res
+  }
 
   def errBody(errResponse: Response[Task]): Task[SchemaError] =
     for {

@@ -1,13 +1,13 @@
 package zio.kafka.registry
 
 import zio.ZIO
-import zio.avro.magnolia.{AvroCompiler, AvroSchemaDerivation}
 import zio.kafka.registry.rest.RestClient
 import zio.test._
-import zio.avro.magnolia.SimpleSchemaGenerator._
 import Assertion._
 import TestRestSupport._
 import KafkaTestUtils._
+import com.sksamuel
+import com.sksamuel.avro4s.AvroSchema
 import zio.kafka.registry.rest.RestClient.{Backward, CompatibilityLevel}
 
 object TestRest extends DefaultRunnableSpec(
@@ -26,8 +26,8 @@ object TestRestSupport {
   case class President2(name: String, age: Int)
 
 
-  val schema1 = AvroCompiler.compile(AvroSchemaDerivation.avroSchema[President1].generate)
-  val schema2 = AvroCompiler.compile(AvroSchemaDerivation.avroSchema[President2].generate)
+  val schema1 = AvroSchema[President1]
+  val schema2 = AvroSchema[President2]
 
   val testSubjects = testM("test subjects empty then non-empty"){
     val subject = "presidents"
