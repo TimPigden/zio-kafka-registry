@@ -31,7 +31,8 @@ object Http4sClient {
 case class Http4sClient(client: Client[Task], root: String) extends AbstractClient {
 
   def uri(path: String) = {
-    val res = Uri.unsafeFromString(s"$root/$path")
+    val res = Uri.unsafeFromString(s"$root$path")
+    println(s"contact $res")
     res
   }
 

@@ -34,7 +34,7 @@ object Kafka {
     private val kafkaPort = 6001
     val schemaRegistryPort = 6002
     override def bootstrapServers: List[String] = List(s"localhost:$kafkaPort")
-    override def registryServer: String = s"localhost:$schemaRegistryPort"
+    override def registryServer: String = s"http://localhost:$schemaRegistryPort"
     override def stop(): UIO[Unit]              = ZIO.effectTotal(embeddedK.stop(true))
   }
 
