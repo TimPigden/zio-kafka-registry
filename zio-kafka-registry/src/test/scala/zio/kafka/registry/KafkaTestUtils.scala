@@ -12,7 +12,9 @@ import zio.kafka.client.AdminClient.KafkaAdminClientConfig
 import zio.random.Random
 import zio.test.environment.{Live, TestEnvironment}
 import Kafka._
+import com.sksamuel.avro4s.RecordFormat
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig
+import org.apache.avro.generic.GenericRecord
 import zio.kafka.client._
 import zio.kafka.registry.rest.{RestClient, RestClientImpl}
 
@@ -123,6 +125,11 @@ object KafkaTestUtils {
                    r(p).provide(lcb)
                  }
     } yield produced
+
+  def withProducerStringRecord[A, V](
+                                      r: Producer[Any, String, GenericRecord] => RIO[Any with Clock with Kafka with Blocking, A],
+                                      format: RecordFormat[V]
+                        ) = withProducer[A, String, GenericRecord](Serde.string, Serde.g)
 
   def consumerSettings(groupId: String, clientId: String) =
     for {
