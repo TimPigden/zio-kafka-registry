@@ -9,7 +9,7 @@ import org.http4s.headers.`Content-Type`
 import zio.interop.catz
 import zio.interop.catz._
 import zio.kafka.registry.rest.{AbstractClient, Serializers}
-import zio.kafka.registry.rest.RestClient.{RestResponse, SchemaError}
+import zio.kafka.registry.rest.RestClient.SchemaError
 import zio.{IO, Task, ZIO, ZManaged}
 import Kafka._
 
@@ -17,7 +17,7 @@ object Http4sClient {
 
   def make: ZManaged[Any, Throwable, Client[Task]] = {
     val zioManaged = ZIO.runtime[Any].map { rts =>
-      val exec = rts.Platform.executor.asEC
+      val exec = rts.platform.executor.asEC
       implicit def rr = rts
       catz.catsIOResourceSyntax(BlazeClientBuilder[Task](exec).resource).toManaged
     }
@@ -28,7 +28,7 @@ object Http4sClient {
   }
 }
 
-case class Http4sClient(client: Client[Task], root: String) extends AbstractClient {
+case class Http4sClient(client: Client[Task], root: String) extends AbstractClient[Any] {
 
   def uri(path: String) = {
     val res = Uri.unsafeFromString(s"$root$path")
@@ -42,7 +42,7 @@ case class Http4sClient(client: Client[Task], root: String) extends AbstractClie
       sErr <- Serializers.parseSchemaError(body)
     } yield sErr
 
-  def requestOut[T](reqIn: Request[Task])(implicit tParser: String => Task[T]): RestResponse[T] = {
+  def requestOut[T](reqIn: Request[Task])(implicit tParser: String => Task[T]): Task[T] = {
     val req = reqIn.withHeaders(reqIn.headers.put(Header("Accept", "application/vnd.schemaregistry.v1+json" )) )
     val errf: Response[Task] => Task[Throwable] = errBody
     for {
@@ -53,10 +53,10 @@ case class Http4sClient(client: Client[Task], root: String) extends AbstractClie
 
   def media = mediaType"application/vnd.schemaregistry.v1+json"
 
-  override def get[T](url: String)(implicit tParser: String => Task[T]): RestResponse[T] =
+  override def get[T](url: String)(implicit tParser: String => Task[T]): Task[T] =
     requestOut(Request[Task](Method.GET, uri(url)))
 
-  def inOut[In, Out](method: Method, url: String, in: In)(implicit inWriter: In => String, outParser: String => Task[Out]): RestResponse[Out] = {
+  def inOut[In, Out](method: Method, url: String, in: In)(implicit inWriter: In => String, outParser: String => Task[Out]): Task[Out] = {
     val asString = inWriter(in)
     val req = Request[Task](method, uri(url))
       .withEntity[String](asString)
@@ -65,13 +65,13 @@ case class Http4sClient(client: Client[Task], root: String) extends AbstractClie
     requestOut[Out](req)
   }
 
-  override def post[In, Out](url: String, in: In)(implicit inWriter: In => String, outParser: String => Task[Out]): RestResponse[Out] =
+  override def post[In, Out](url: String, in: In)(implicit inWriter: In => String, outParser: String => Task[Out]): Task[Out] =
     inOut[In, Out](Method.POST, url, in)
 
-  override def put[In, Out](url: String, in: In)(implicit inWriter: In => String, outParser: String => Task[Out]): RestResponse[Out] =
+  override def put[In, Out](url: String, in: In)(implicit inWriter: In => String, outParser: String => Task[Out]): Task[Out] =
     inOut[In, Out](Method.PUT, url, in)
 
-  override def delete[Out](url: String)(implicit outParser: String => Task[Out]): RestResponse[Out] =
+  override def delete[Out](url: String)(implicit outParser: String => Task[Out]): Task[Out] =
     requestOut(Request[Task](Method.DELETE, uri(url)))
 
 }

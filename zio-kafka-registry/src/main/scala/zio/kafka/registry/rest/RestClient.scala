@@ -2,6 +2,7 @@ package zio.kafka.registry.rest
 
 import org.apache.avro.Schema
 import zio._
+import zio.blocking.Blocking
 import zio.kafka.registry.rest.RestClient._
 
 trait RestClient {
@@ -13,7 +14,6 @@ object RestClient {
 
   case class WrappedSchema(subject: String, id: Int, version: Int, schema: Schema)
 
-  type RestResponse[T] = Task[T]
 
   sealed trait CompatibilityLevel
   case object Backward extends CompatibilityLevel
@@ -22,7 +22,7 @@ object RestClient {
   case object ForwardTransitive extends CompatibilityLevel
   case object Full extends CompatibilityLevel
   case object FullTransitive extends CompatibilityLevel
-  case object NoCompatibilityLevel$ extends CompatibilityLevel // didn't want to muddy the waters with "None"
+  case object NoCompatibilityLevel extends CompatibilityLevel // didn't want to muddy the waters with "None"
 
   object CompatibilityLevel {
     val values: Map[CompatibilityLevel, String] = Map(
@@ -32,11 +32,13 @@ object RestClient {
       ForwardTransitive  -> "FORWARD_TRANSITIVE",
       Full  -> "FULL",
       FullTransitive  -> "FULL_TRANSITIVE",
-      NoCompatibilityLevel$  -> "NONE",
+      NoCompatibilityLevel  -> "NONE",
     )
   }
 
-  trait Service[Any] {
+  trait Service[R] {
+    type RestResponse[T] = RIO[R, T]
+
     def schema(id: Int): RestResponse[Schema]
 
     def subjects: RestResponse[List[String]]
@@ -51,7 +53,7 @@ object RestClient {
      */
     def version(subject: String, versionId: Option[Int]): RestResponse[WrappedSchema]
 
-    def postSchema(subject: String, schema: Schema): RestResponse[Int]
+    def registerSchema(subject: String, schema: Schema): RestResponse[Int]
 
     def alreadyPresent(subject: String, schema: Schema): RestResponse[Option[WrappedSchema]]
 
@@ -70,7 +72,7 @@ object RestClient {
 
 }
 
-case class RestClientImpl(abstractClient: AbstractClient) extends RestClient.Service[Any] {
+case class RestClientImpl(abstractClient: AbstractClient[Any]) extends RestClient.Service[Any] {
   import Serializers._
 
   override def schema(id: Int): RestResponse[Schema] =
@@ -92,7 +94,7 @@ case class RestClientImpl(abstractClient: AbstractClient) extends RestClient.Ser
   override def version(subject: String, versionId: Option[Int]): RestResponse[RestClient.WrappedSchema] =
     abstractClient.get(Urls.version(subject, versionId))
 
-  override def postSchema(subject: String, schema: Schema): RestResponse[Int] =
+  override def registerSchema(subject: String, schema: Schema): RestResponse[Int] =
     abstractClient.post(Urls.postSchema(subject), schema)
 
   override def alreadyPresent(subject: String, schema: Schema): RestResponse[Option[RestClient.WrappedSchema]] = {
@@ -134,7 +136,7 @@ case class RestClientImpl(abstractClient: AbstractClient) extends RestClient.Ser
   }
 
   override def config(subject: String): RestResponse[CompatibilityLevel] = {
-    implicit val pc = parseCompatibilityLevel(true) _
+    implicit val pc = parseCompatibilityLevel(false) _
     abstractClient.get(Urls.config(subject))
   }
 }

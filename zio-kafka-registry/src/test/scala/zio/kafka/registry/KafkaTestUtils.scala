@@ -6,13 +6,13 @@ import zio.{Chunk, Managed, RIO, UIO, ZIO, ZManaged}
 import org.apache.kafka.clients.producer.ProducerRecord
 import zio.blocking.Blocking
 import zio.clock.Clock
-import zio.kafka.client.serde.Serde
+import zio.kafka.client.serde.{Serde, Serializer}
 import zio.duration._
 import zio.kafka.client.AdminClient.KafkaAdminClientConfig
 import zio.random.Random
 import zio.test.environment.{Live, TestEnvironment}
 import Kafka._
-import com.sksamuel.avro4s.RecordFormat
+import com.sksamuel.avro4s.{RecordFormat, ToRecord}
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig
 import org.apache.avro.generic.GenericRecord
 import zio.kafka.client._
@@ -114,8 +114,8 @@ object KafkaTestUtils {
 
   def withProducer[A, K, V](
     r: Producer[Any, K, V] => RIO[Any with Clock with Kafka with Blocking, A],
-    kSerde: Serde[Any, K],
-    vSerde: Serde[Any, V]
+    kSerde: Serializer[Any, K],
+    vSerde: Serializer[Any, V]
   ): RIO[KafkaTestEnvironment, A] =
     for {
       settings <- registryProducerSettings
@@ -126,10 +126,9 @@ object KafkaTestUtils {
                  }
     } yield produced
 
-  def withProducerStringRecord[A, V](
-                                      r: Producer[Any, String, GenericRecord] => RIO[Any with Clock with Kafka with Blocking, A],
-                                      format: RecordFormat[V]
-                        ) = withProducer[A, String, GenericRecord](Serde.string, Serde.g)
+  def withProducerStringRecord[A, V](r: Producer[Any, String, GenericRecord] => RIO[Any with Clock with Kafka with Blocking, A],
+                                     toRecord: ToRecord[V],
+                        ) = withProducer[A, String, GenericRecord](Serde.string, )
 
   def consumerSettings(groupId: String, clientId: String) =
     for {

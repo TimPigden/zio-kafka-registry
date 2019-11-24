@@ -45,9 +45,9 @@ val squants = "org.typelevel"  %% "squants"  % "1.3.0"
 
 // val magnolia = "com.softwaremill" %% "magnolia" % "0.11.0-sml"
 val magnolia = "com.propensive" %% "magnolia" % "0.12.0"
-lazy val `zio-version` = "1.0.0-RC16"
-lazy val `zio-interop` = "2.0.0.0-RC7"
-lazy val `zio-kafka-version` = "0.4.0" // dummy version to pick up local library
+lazy val `zio-version` = "1.0.0-RC17"
+lazy val `zio-interop` = "2.0.0.0-RC8"
+lazy val `zio-kafka-version` = "0.4.1" // dummy version to pick up local library
 lazy val zio = "dev.zio" %% "zio" %  `zio-version`
 lazy val `zio-kafka` = "dev.zio" %% "zio-kafka"   % `zio-kafka-version`
 lazy val `zio-test` = "dev.zio" %% "zio-test" % `zio-version` % "test"

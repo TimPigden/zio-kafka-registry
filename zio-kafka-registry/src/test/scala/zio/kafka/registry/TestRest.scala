@@ -35,7 +35,7 @@ object TestRestSupport {
       rc <- ZIO.environment[RestClient]
       restClient = rc.restClient
       initial <- restClient.subjects
-      posted <-  restClient.postSchema(subject, schema1)
+      posted <-  restClient.registerSchema(subject, schema1)
       already <- restClient.alreadyPresent(subject, schema1)
       schemaBack <- restClient.schema(posted)
       later <- restClient.subjects
@@ -55,7 +55,7 @@ object TestRestSupport {
       rc <- ZIO.environment[RestClient]
       restClient = rc.restClient
       initial <- restClient.subjects
-      posted <-  restClient.postSchema(subject, schema1)
+      posted <-  restClient.registerSchema(subject, schema1)
       later <- restClient.subjects
       _ <- restClient.delete(subject, posted)
       laterStill <- restClient.subjects
@@ -72,7 +72,7 @@ object TestRestSupport {
     for {
       rc <- ZIO.environment[RestClient]
       restClient = rc.restClient
-      posted <-  restClient.postSchema(subject, schema1)
+      posted <-  restClient.registerSchema(subject, schema1)
       later <- restClient.subjects
       _ <- restClient.deleteSubject(subject)
       laterStill <- restClient.subjects
@@ -88,8 +88,8 @@ object TestRestSupport {
     for {
       rc <- ZIO.environment[RestClient]
       restClient = rc.restClient
-      _ <-  restClient.postSchema(subject, schema1)
-      _ <-  restClient.postSchema(subject, schema2)
+      _ <-  restClient.registerSchema(subject, schema1)
+      _ <-  restClient.registerSchema(subject, schema2)
       versions <- restClient.subjectVersions(subject)
     } yield {
       assert(versions, equalTo(List(1, 2)))
@@ -101,7 +101,7 @@ object TestRestSupport {
     for {
       rc <- ZIO.environment[RestClient]
       restClient = rc.restClient
-      _ <- restClient.postSchema(subject, schema1)
+      _ <- restClient.registerSchema(subject, schema1)
       compat <- restClient.compatible(subject, 1, schema2)
     } yield {
       assert(compat, equalTo(true))
