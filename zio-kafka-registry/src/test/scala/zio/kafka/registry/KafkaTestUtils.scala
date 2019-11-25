@@ -2,7 +2,7 @@ package zio.kafka.registry
 
 import net.manub.embeddedkafka.schemaregistry.{EmbeddedKWithSR, EmbeddedKafka}
 import org.apache.kafka.clients.consumer.ConsumerConfig
-import zio.{Chunk, Managed, RIO, UIO, ZIO, ZManaged}
+import zio.{Cause, Chunk, Managed, RIO, Semaphore, UIO, ZIO, ZManaged}
 import org.apache.kafka.clients.producer.ProducerRecord
 import zio.blocking.Blocking
 import zio.clock.Clock
@@ -16,7 +16,10 @@ import com.sksamuel.avro4s.{RecordFormat, ToRecord}
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig
 import org.apache.avro.generic.GenericRecord
 import zio.kafka.client._
-import zio.kafka.registry.rest.{RestClient, RestClientImpl}
+import zio.kafka.registry.rest.{AbstractClient, ConfluentClient, RestClient, RestClientImpl}
+import io.confluent.kafka.schemaregistry.client.rest.{RestService => ConfluentRestService}
+import zio.kafka.registry.rest.ConfluentClient.ConfluentClientImpl
+import zio.test.TestFailure
 
 trait Kafka {
   def kafka: Kafka.Service
@@ -57,7 +60,7 @@ object Kafka {
       override val kafka: Service = DefaultLocal
     }))(_.kafka.stop())
 
-  type KafkaTestEnvironment = Kafka with TestEnvironment with RestClient
+  type KafkaTestEnvironment = Kafka with TestEnvironment with AbstractClient
 
   type KafkaClockBlocking = Kafka with Clock with Blocking
 
@@ -77,7 +80,8 @@ object Kafka {
 
 object KafkaTestUtils {
 
-  def kafkaEnvironment(kafkaE: Managed[Nothing, Kafka]): Managed[Throwable, KafkaTestEnvironment] =
+  def kafkaEnvironmentHttp4s(kafkaE: Managed[Nothing, Kafka],
+                      ) =
     for {
       testEnvironment <- TestEnvironment.Value
       kafkaS          <- kafkaE
@@ -90,17 +94,45 @@ object KafkaTestUtils {
       testEnvironment.random,
       testEnvironment.sized,
       testEnvironment.system
-    ) with Kafka with RestClient {
+    ) with Kafka with RestClient[Any] {
       val kafka = kafkaS.kafka
       val restClient = RestClientImpl(Http4sClient(http4sClient, kafka.registryServer))
     }
 
+  def kafkaEnvironmentConfluent(kafkaE: Managed[Nothing, Kafka]) =
+    for {
+      testEnvironment <- TestEnvironment.Value
+      kafkaS          <- kafkaE
+      sem <- ZManaged.fromEffect(Semaphore.make(1L))
+    } yield new TestEnvironment(
+      testEnvironment.blocking,
+      testEnvironment.clock,
+      testEnvironment.console,
+      testEnvironment.live,
+      testEnvironment.random,
+      testEnvironment.sized,
+      testEnvironment.system
+    ) with Kafka with ConfluentClient {
+      val kafka = kafkaS.kafka
+      val client = {
+        val confluentService = new ConfluentRestService(kafka.registryServer)
+        ConfluentClientImpl(confluentService, sem).client
+      }
+    }
 
-  val embeddedKafkaEnvironment: Managed[Throwable, KafkaTestEnvironment] =
-    kafkaEnvironment(Kafka.makeEmbedded)
+  val embeddedHttp4sKafkaEnvironment =
+    kafkaEnvironmentHttp4s(Kafka.makeEmbedded)
+      .mapErrorCause(cause => Cause.fail(TestFailure.Runtime(cause)))
 
-  val localKafkaEnvironment: Managed[Throwable, KafkaTestEnvironment] =
-    kafkaEnvironment(Kafka.makeLocal)
+  val localHttp4sKafkaEnvironment =
+    kafkaEnvironmentHttp4s(Kafka.makeLocal)
+
+  val embeddedConfluentKafkaEnvironment =
+    kafkaEnvironmentConfluent(Kafka.makeEmbedded)
+      .mapErrorCause(cause => Cause.fail(TestFailure.Runtime(cause)))
+
+  val localConfluentKafkaEnvironment =
+    kafkaEnvironmentConfluent(Kafka.makeLocal)
 
   def registryProducerSettings =
     for {
@@ -126,9 +158,9 @@ object KafkaTestUtils {
                  }
     } yield produced
 
-  def withProducerStringRecord[A, V](r: Producer[Any, String, GenericRecord] => RIO[Any with Clock with Kafka with Blocking, A],
+/*  def withProducerStringRecord[A, V](r: Producer[Any, String, GenericRecord] => RIO[Any with Clock with Kafka with Blocking, A],
                                      toRecord: ToRecord[V],
-                        ) = withProducer[A, String, GenericRecord](Serde.string, )
+                        ) = withProducer[A, String, GenericRecord](Serde.string, )*/
 
   def consumerSettings(groupId: String, clientId: String) =
     for {
@@ -185,7 +217,7 @@ object KafkaTestUtils {
       settings <- adminSettings
       lcb      <- Kafka.liveClockBlocking
       fRes <- AdminClient
-               .adminClient(settings)
+               .make(settings)
                .use { client =>
                  f(client)
                }

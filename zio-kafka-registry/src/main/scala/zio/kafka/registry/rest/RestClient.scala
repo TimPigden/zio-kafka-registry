@@ -5,8 +5,16 @@ import zio._
 import zio.blocking.Blocking
 import zio.kafka.registry.rest.RestClient._
 
-trait RestClient {
-  val restClient: RestClient.Service[Any]
+trait AbstractClient {
+  val client: AbstractClient.Service
+}
+
+object AbstractClient {
+  trait Service
+}
+
+trait RestClient[R] {
+  val restClient: RestClient.Service[R]
 }
 
 object RestClient {
@@ -36,7 +44,7 @@ object RestClient {
     )
   }
 
-  trait Service[R] {
+  trait Service[R] extends AbstractClient.Service {
     type RestResponse[T] = RIO[R, T]
 
     def schema(id: Int): RestResponse[Schema]
@@ -72,7 +80,7 @@ object RestClient {
 
 }
 
-case class RestClientImpl(abstractClient: AbstractClient[Any]) extends RestClient.Service[Any] {
+case class RestClientImpl(abstractClient: AbstractHttpClient[Any]) extends RestClient.Service[Any] {
   import Serializers._
 
   override def schema(id: Int): RestResponse[Schema] =

@@ -2,7 +2,7 @@ package zio.kafka.registry.rest
 
 import zio.{RIO, Task}
 
-trait AbstractClient[-R] {
+trait AbstractHttpClient[-R] {
 
   def get[T](url: String)(implicit tParser: String => Task[T]): RIO[R, T]
 

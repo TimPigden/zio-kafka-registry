@@ -8,7 +8,7 @@ import org.http4s.client.blaze.BlazeClientBuilder
 import org.http4s.headers.`Content-Type`
 import zio.interop.catz
 import zio.interop.catz._
-import zio.kafka.registry.rest.{AbstractClient, Serializers}
+import zio.kafka.registry.rest.{AbstractHttpClient, Serializers}
 import zio.kafka.registry.rest.RestClient.SchemaError
 import zio.{IO, Task, ZIO, ZManaged}
 import Kafka._
@@ -28,7 +28,7 @@ object Http4sClient {
   }
 }
 
-case class Http4sClient(client: Client[Task], root: String) extends AbstractClient[Any] {
+case class Http4sClient(client: Client[Task], root: String) extends AbstractHttpClient[Any] {
 
   def uri(path: String) = {
     val res = Uri.unsafeFromString(s"$root$path")
