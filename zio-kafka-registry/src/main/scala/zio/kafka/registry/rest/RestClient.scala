@@ -111,11 +111,11 @@ case class RestClientImpl(abstractClient: AbstractHttpClient[Any]) extends RestC
       res <- opt.either.map {
         case Left(err) => err match {
           case SchemaError(errorCode, message) =>
-            if (errorCode == 40403) IO.succeed(Option.empty[RestClient.WrappedSchema])
+            if (errorCode == 40403) IO.effectTotal(Option.empty[RestClient.WrappedSchema])
             else IO.fail(err)
           case _ => IO.fail(err)
         }
-        case Right(ok) => IO.succeed(Some(ok))
+        case Right(ok) => IO.effectTotal(Some(ok))
       }
       f <- res
     } yield f

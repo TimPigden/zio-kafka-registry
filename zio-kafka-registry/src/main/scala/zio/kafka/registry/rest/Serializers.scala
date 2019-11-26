@@ -3,7 +3,6 @@ package zio.kafka.registry.rest
 import java.text.ParseException
 
 import org.apache.avro.Schema
-import org.http4s.blaze.http.parser.BaseExceptions.ParserException
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 import zio.kafka.registry.rest.RestClient.{CompatibilityLevel, SchemaError, WrappedSchema}
@@ -119,5 +118,5 @@ object Serializers {
     } yield id).head
   }
 
-  implicit def parseString(s: String): Task[String] = IO.succeed(s)
+  implicit def parseString(s: String): Task[String] = IO.effectTotal(s)
 }

@@ -1,8 +1,10 @@
 package zio.kafka.registry.rest
 
+import io.confluent.kafka.schemaregistry.client.{CachedSchemaRegistryClient, SchemaRegistryClient}
 import io.confluent.kafka.schemaregistry.client.rest.entities.{Schema => ConfluentSchema}
 import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException
 import io.confluent.kafka.schemaregistry.client.rest.{RestService => ConfluentRestService}
+import io.confluent.kafka.serializers.KafkaAvroSerializer
 import org.apache.avro
 import org.apache.avro.{Schema => AvroSchema}
 import zio.blocking._
@@ -12,7 +14,7 @@ import zio.{IO, RIO, Semaphore, Task}
 
 import scala.collection.JavaConverters._
 
-trait  ConfluentClient {
+trait ConfluentClient {
   val client: ConfluentClient.Service
 }
 
@@ -22,6 +24,7 @@ object ConfluentClient {
 
     val rc: ConfluentRestService
     val sem: Semaphore
+    val avroSerializer: KafkaAvroSerializer
 
     private def failSchemaError[T](exception: RestClientException): RestResponse[T] =
       IO.fail(SchemaError(exception.getErrorCode, exception.getMessage))
@@ -34,25 +37,27 @@ object ConfluentClient {
 
     def restResponse[T](f: => T): RestResponse[T] =
       sem.withPermit(
-      blocking {
-      try {
-        IO.succeed(f)
-      } catch {
-        case e: Throwable => checkSchemaError(e)
-      }
+        blocking {
+          try {
+            IO.effectTotal(f)
+          } catch {
+            case e: Throwable => checkSchemaError(e)
+          }
 
-     }
+        }
       )
 
     def restResponseM[T](f: => Task[T]): RestResponse[T] =
-      blocking {
-      try {
-        f
-      } catch {
-        case e: Throwable => checkSchemaError(e)
-      }
+      sem.withPermit(
+        blocking {
+          try {
+            f
+          } catch {
+            case e: Throwable => checkSchemaError(e)
+          }
 
-       }
+        }
+      )
 
     override def schema(id: Int): RestResponse[avro.Schema] = restResponseM {
       parseSchemaDirect(rc.getId(id).getSchemaString)
@@ -101,7 +106,7 @@ object ConfluentClient {
       } catch {
         case e: RestClientException =>
           if (e.getErrorCode == 40403)
-            IO.succeed(Option.empty[WrappedSchema])
+            IO.effectTotal(Option.empty[WrappedSchema])
           else failSchemaError[Option[WrappedSchema]](e)
         case x => IO.fail(x)
       }
@@ -133,10 +138,16 @@ object ConfluentClient {
       }
   }
 
-  case class ConfluentClientImpl(confluentRestService: ConfluentRestService, semaphore: Semaphore) extends ConfluentClient {
+  case class ConfluentClientImpl(confluentRestService: ConfluentRestService,
+                                 semaphore: Semaphore) extends ConfluentClient {
     val client: ConfluentClient.Service = new Service {
       override val rc: ConfluentRestService = confluentRestService
       override val sem = semaphore
+      override val avroSerializer: KafkaAvroSerializer = {
+        val registryClient = new CachedSchemaRegistryClient(rc, 1000)
+        new KafkaAvroSerializer(registryClient)
+      }
     }
   }
+
 }

@@ -31,12 +31,12 @@ object TestRestSupport {
     def restClientService: URIO[RC, RCS]
 
     def allTests = List(
-//      testSubjects,
-//      testDelete,
+     testSubjects,
+      testDelete,
       modifyCompatibility,
-//      checkDeleteSubject,
-//      multipleSchemas,
-//      compatibleSchemas
+      checkDeleteSubject,
+      multipleSchemas,
+      compatibleSchemas
     )
 
     val testSubjects
@@ -138,18 +138,10 @@ object TestRestSupport {
 
       for {
         restClient <- restClientService
-        g1 <- setCheck(restClient, Backward)
-        g2 <- setCheck(restClient, BackwardTransitive)
-        g3 <- setCheck(restClient, Forward)
-        g4 <- setCheck(restClient, ForwardTransitive)
-        g5 <- setCheck(restClient, Full)
-        g6 <- setCheck(restClient, FullTransitive)
-        g7 <- setCheck(restClient, NoCompatibilityLevel)
-//        general <- ZIO.collectAll(CompatibilityLevel.values.keySet.map { compat => setCheck(restClient, compat) })
-//        bySubject <- ZIO.collectAll(CompatibilityLevel.values.keySet.map { compat => setCheck2(restClient, compat) })
+        general <- ZIO.collectAll(CompatibilityLevel.values.keySet.map { compat => setCheck(restClient, compat) })
+        bySubject <- ZIO.collectAll(CompatibilityLevel.values.keySet.map { compat => setCheck2(restClient, compat) })
       } yield {
-        checkAll(List(g1, g2, g3, g4, g5, g6, g7))/* &&
-          checkAll(bySubject)*/
+        checkAll(general) && checkAll(bySubject)
       }
 
     }

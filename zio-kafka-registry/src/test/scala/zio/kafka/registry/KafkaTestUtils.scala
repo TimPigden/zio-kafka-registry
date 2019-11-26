@@ -13,11 +13,12 @@ import zio.random.Random
 import zio.test.environment.{Live, TestEnvironment}
 import Kafka._
 import com.sksamuel.avro4s.{RecordFormat, ToRecord}
-import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig
+import io.confluent.kafka.serializers.{AbstractKafkaAvroSerDeConfig, KafkaAvroSerializer}
 import org.apache.avro.generic.GenericRecord
 import zio.kafka.client._
 import zio.kafka.registry.rest.{AbstractClient, ConfluentClient, RestClient, RestClientImpl}
 import io.confluent.kafka.schemaregistry.client.rest.{RestService => ConfluentRestService}
+import org.apache.avro.Schema
 import zio.kafka.registry.rest.ConfluentClient.ConfluentClientImpl
 import zio.test.TestFailure
 
@@ -144,10 +145,9 @@ object KafkaTestUtils {
       Map(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG -> registry)
     )
 
-  def withProducer[A, K, V](
-    r: Producer[Any, K, V] => RIO[Any with Clock with Kafka with Blocking, A],
-    kSerde: Serializer[Any, K],
-    vSerde: Serializer[Any, V]
+  def withProducer[A, K, V](    kSerde: Serializer[Any, K],
+                                vSerde: Serializer[Any, V]
+                           )(r: Producer[Any, K, V] => RIO[Any with Clock with Kafka with Blocking, A],
   ): RIO[KafkaTestEnvironment, A] =
     for {
       settings <- registryProducerSettings
@@ -158,9 +158,15 @@ object KafkaTestUtils {
                  }
     } yield produced
 
-/*  def withProducerStringRecord[A, V](r: Producer[Any, String, GenericRecord] => RIO[Any with Clock with Kafka with Blocking, A],
-                                     toRecord: ToRecord[V],
-                        ) = withProducer[A, String, GenericRecord](Serde.string, )*/
+  def withProducerAvroRecord[A, V](toRecord: ToRecord[V])
+                                  (r: Producer[Any, String, GenericRecord] => RIO[Any with Clock with Kafka with Blocking, A]
+                                  ) = {
+    for {
+      confluent <-  ZIO.environment[ConfluentClient].map {_.client.avroSerializer}
+      serializer = Serializer.apply(confluent)
+      producing <-  withProducer[A, String, GenericRecord](Serde.string, serializer)(r)
+    } yield producing
+  }
 
   def consumerSettings(groupId: String, clientId: String) =
     for {
@@ -236,5 +242,18 @@ object KafkaTestUtils {
   def randomTopic = randomThing("topic")
 
   def randomGroup = randomThing("group")
+
+  def produceMany[T](t: String, kvs: Iterable[(String, T)])
+                    (implicit schema: Schema, toRecord: ToRecord[T]) =
+    withProducerAvroRecord(toRecord) { p =>
+      val records = kvs.map {
+        case (k, v) =>
+          val rec = toRecord.to(v)
+          new ProducerRecord[String, GenericRecord](t, k, rec)
+      }
+      val chunk = Chunk.fromIterable(records)
+      p.produceChunk(chunk)
+    }.flatten
+
 
 }
