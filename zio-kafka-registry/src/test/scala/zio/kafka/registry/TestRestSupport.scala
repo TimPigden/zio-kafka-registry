@@ -1,13 +1,13 @@
 package zio.kafka.registry
 
-import zio.{URIO, ZIO}
+import zio.{UIO, URIO, ZIO}
 import zio.kafka.registry.rest.{AbstractClient, ConfluentClient, RestClient}
 import zio.test._
 import Assertion._
 import TestRestSupport._
 import KafkaTestUtils._
 import com.sksamuel
-import com.sksamuel.avro4s.AvroSchema
+import com.sksamuel.avro4s.{AvroSchema, RecordFormat}
 import zio.blocking.Blocking
 import zio.clock.Clock.Live
 import zio.duration.Duration
@@ -21,13 +21,16 @@ object TestRestSupport {
   val schema1 = AvroSchema[President1]
   val schema2 = AvroSchema[President2]
 
+  val format1 = RecordFormat[President1]
+  val format2 = RecordFormat[President2]
 
-  val confluentAllTests = new AllTests[Blocking, ConfluentClient, ConfluentClient.Service] {
+
+  val confluentAllTests = new AllTests[Blocking, ConfluentClient[Blocking], ConfluentClient.Service[Blocking]] {
     override def restClientService =
-      ZIO.environment[ConfluentClient].map {_.client}
+      ZIO.environment[ConfluentClient[Blocking]].map {_.client}
   }
 
-  trait AllTests[R, RC, RCS <: RestClient.Service[R]] {
+  trait AllTests[R <: Blocking, RC, RCS <: ConfluentClient.Service[R]] {
     def restClientService: URIO[RC, RCS]
 
     def allTests = List(
@@ -122,7 +125,7 @@ object TestRestSupport {
 
       val subject = "presidentsModifyCompatibility"
 
-      def setCheck[R](restClient: RestClient.Service[R], compat: CompatibilityLevel) =
+      def setCheck(restClient: ConfluentClient.Service[R], compat: CompatibilityLevel) =
         for {
           x <- restClient.setConfig(compat)
           _ = println(s"setConfig to $compat")
@@ -130,7 +133,7 @@ object TestRestSupport {
           _ = println(s"got back check result $check")
         } yield assert(check, equalTo(compat))
 
-      def setCheck2[R](restClient: RestClient.Service[R], compat: CompatibilityLevel) =
+      def setCheck2(restClient: ConfluentClient.Service[R], compat: CompatibilityLevel) =
         for {
           _ <- restClient.setConfig(subject, compat)
           check <- restClient.config(subject)

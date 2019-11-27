@@ -16,10 +16,10 @@ import com.sksamuel.avro4s.{RecordFormat, ToRecord}
 import io.confluent.kafka.serializers.{AbstractKafkaAvroSerDeConfig, KafkaAvroSerializer}
 import org.apache.avro.generic.GenericRecord
 import zio.kafka.client._
-import zio.kafka.registry.rest.{AbstractClient, ConfluentClient, RestClient, RestClientImpl}
+import zio.kafka.registry.rest.{AbstractClient, ConfluentClient, RestClient}
 import io.confluent.kafka.schemaregistry.client.rest.{RestService => ConfluentRestService}
 import org.apache.avro.Schema
-import zio.kafka.registry.rest.ConfluentClient.ConfluentClientImpl
+import zio.kafka.registry.Settings.RecordNameStrategy
 import zio.test.TestFailure
 
 trait Kafka {
@@ -61,7 +61,7 @@ object Kafka {
       override val kafka: Service = DefaultLocal
     }))(_.kafka.stop())
 
-  type KafkaTestEnvironment = Kafka with TestEnvironment with AbstractClient
+  type KafkaTestEnvironment = Kafka with TestEnvironment
 
   type KafkaClockBlocking = Kafka with Clock with Blocking
 
@@ -81,25 +81,6 @@ object Kafka {
 
 object KafkaTestUtils {
 
-  def kafkaEnvironmentHttp4s(kafkaE: Managed[Nothing, Kafka],
-                      ) =
-    for {
-      testEnvironment <- TestEnvironment.Value
-      kafkaS          <- kafkaE
-      http4sClient <-  Http4sClient.make
-    } yield new TestEnvironment(
-      testEnvironment.blocking,
-      testEnvironment.clock,
-      testEnvironment.console,
-      testEnvironment.live,
-      testEnvironment.random,
-      testEnvironment.sized,
-      testEnvironment.system
-    ) with Kafka with RestClient[Any] {
-      val kafka = kafkaS.kafka
-      val restClient = RestClientImpl(Http4sClient(http4sClient, kafka.registryServer))
-    }
-
   def kafkaEnvironmentConfluent(kafkaE: Managed[Nothing, Kafka]) =
     for {
       testEnvironment <- TestEnvironment.Value
@@ -113,20 +94,13 @@ object KafkaTestUtils {
       testEnvironment.random,
       testEnvironment.sized,
       testEnvironment.system
-    ) with Kafka with ConfluentClient {
+    ) with Kafka with ConfluentClient[Blocking] {
       val kafka = kafkaS.kafka
       val client = {
         val confluentService = new ConfluentRestService(kafka.registryServer)
-        ConfluentClientImpl(confluentService, sem).client
+        ConfluentClientImpl(confluentService, RecordNameStrategy, kafka.registryServer, sem).client
       }
     }
-
-  val embeddedHttp4sKafkaEnvironment =
-    kafkaEnvironmentHttp4s(Kafka.makeEmbedded)
-      .mapErrorCause(cause => Cause.fail(TestFailure.Runtime(cause)))
-
-  val localHttp4sKafkaEnvironment =
-    kafkaEnvironmentHttp4s(Kafka.makeLocal)
 
   val embeddedConfluentKafkaEnvironment =
     kafkaEnvironmentConfluent(Kafka.makeEmbedded)
@@ -142,12 +116,13 @@ object KafkaTestUtils {
     } yield ProducerSettings(
       servers,
       5.seconds,
-      Map(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG -> registry)
+      Map(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG -> registry,
+        AbstractKafkaAvroSerDeConfig.VALUE_SUBJECT_NAME_STRATEGY-> "io.confluent.kafka.serializers.subject.RecordNameStrategy")
     )
 
   def withProducer[A, K, V](    kSerde: Serializer[Any, K],
-                                vSerde: Serializer[Any, V]
-                           )(r: Producer[Any, K, V] => RIO[Any with Clock with Kafka with Blocking, A],
+                                vSerde: Serializer[Any with Blocking, V]
+                           )(r: Producer[Any with Blocking, K, V] => RIO[Any with Clock with Kafka with Blocking, A],
   ): RIO[KafkaTestEnvironment, A] =
     for {
       settings <- registryProducerSettings
@@ -158,12 +133,11 @@ object KafkaTestUtils {
                  }
     } yield produced
 
-  def withProducerAvroRecord[A, V](toRecord: ToRecord[V])
-                                  (r: Producer[Any, String, GenericRecord] => RIO[Any with Clock with Kafka with Blocking, A]
+  def withProducerAvroRecord[A, V](recordFormat: RecordFormat[V])
+                                  (r: Producer[Any with Blocking, String, GenericRecord] => RIO[Any with Clock with Kafka with Blocking, A]
                                   ) = {
     for {
-      confluent <-  ZIO.environment[ConfluentClient].map {_.client.avroSerializer}
-      serializer = Serializer.apply(confluent)
+      serializer <-  ZIO.environment[ConfluentClient[Blocking]].map {_.client.avroSerializer}
       producing <-  withProducer[A, String, GenericRecord](Serde.string, serializer)(r)
     } yield producing
   }
@@ -244,16 +218,17 @@ object KafkaTestUtils {
   def randomGroup = randomThing("group")
 
   def produceMany[T](t: String, kvs: Iterable[(String, T)])
-                    (implicit schema: Schema, toRecord: ToRecord[T]) =
-    withProducerAvroRecord(toRecord) { p =>
+                    (implicit recordFormat: RecordFormat[T]) =
+    withProducerAvroRecord(recordFormat) { p =>
       val records = kvs.map {
         case (k, v) =>
-          val rec = toRecord.to(v)
+          val rec = recordFormat.to(v)
           new ProducerRecord[String, GenericRecord](t, k, rec)
       }
       val chunk = Chunk.fromIterable(records)
       p.produceChunk(chunk)
     }.flatten
+
 
 
 }
