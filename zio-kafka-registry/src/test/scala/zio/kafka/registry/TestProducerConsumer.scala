@@ -2,7 +2,7 @@ package zio.kafka.registry
 
 import zio.test._
 import TestRestSupport._
-import KafkaTestUtils._
+import KafkaRegistryTestUtils._
 import zio._
 import zio.test.TestAspect._
 import TestProducerSupport._

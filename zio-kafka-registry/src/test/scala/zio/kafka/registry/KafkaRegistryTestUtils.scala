@@ -76,7 +76,7 @@ object Kafka {
 
 }
 
-object KafkaTestUtils {
+object KafkaRegistryTestUtils {
 
   def kafkaEnvironmentConfluent(kafkaE: Managed[Nothing, Kafka]) =
     for {
