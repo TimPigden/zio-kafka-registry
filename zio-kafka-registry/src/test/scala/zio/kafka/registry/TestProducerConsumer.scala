@@ -7,7 +7,6 @@ import zio._
 import zio.test.TestAspect._
 import TestProducerSupport._
 import Assertion._
-import org.apache.avro.generic.GenericData
 import zio.kafka.client.Subscription
 import zio.kafka.client.serde.Serde
 import zio.kafka.registry.Kafka.KafkaTestEnvironment

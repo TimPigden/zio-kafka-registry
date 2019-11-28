@@ -112,9 +112,7 @@ object TestRestSupport {
       def setCheck(restClient: ConfluentClientService, compat: CompatibilityLevel) =
         for {
           x <- restClient.setConfig(compat)
-          _ = println(s"setConfig to $compat")
           check <- restClient.config
-          _ = println(s"got back check result $check")
         } yield assert(check, equalTo(compat))
 
       def setCheck2(restClient: ConfluentClientService, compat: CompatibilityLevel) =

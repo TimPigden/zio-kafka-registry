@@ -2,7 +2,7 @@ package zio.kafka.registry
 
 import net.manub.embeddedkafka.schemaregistry.{EmbeddedKWithSR, EmbeddedKafka}
 import org.apache.kafka.clients.consumer.ConsumerConfig
-import zio.{Cause, Chunk, Managed, RIO, Semaphore, UIO, ZIO, ZManaged}
+import zio.{Cause, Chunk, Managed, RIO, UIO, ZIO, ZManaged}
 import org.apache.kafka.clients.producer.ProducerRecord
 import zio.blocking.Blocking
 import zio.clock.Clock
@@ -11,9 +11,7 @@ import zio.duration._
 import zio.kafka.client.AdminClient.KafkaAdminClientConfig
 import zio.random.Random
 import zio.test.environment.{Live, TestEnvironment}
-import Kafka._
-import com.sksamuel.avro4s.{RecordFormat, ToRecord}
-import io.confluent.kafka.serializers.{AbstractKafkaAvroSerDeConfig, KafkaAvroSerializer}
+import com.sksamuel.avro4s.RecordFormat
 import org.apache.avro.generic.GenericRecord
 import zio.kafka.client._
 import zio.kafka.registry.Settings.RecordNameStrategy

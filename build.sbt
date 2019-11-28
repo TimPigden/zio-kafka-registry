@@ -33,7 +33,8 @@ val myScalacOptions = Seq(
   "-language:higherKinds",
   "-Ywarn-value-discard",
   "-Ypartial-unification",
-  "-language:implicitConversions"
+  "-language:implicitConversions",
+  "-Xlint"
   )
 
 val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
@@ -71,18 +72,6 @@ lazy val commonSettings = Seq(
   organization := "com.optrak",
 )
 
-lazy val `zio-avro` = (project in file ("zio-avro"))
-  .settings(commonSettings: _*)
-  .settings(libraryDependencies ++= Seq(
-    json4s,
-    avro,
-    zio,
-    `zio-test`,
-    `zio-test-sbt`,
-    snappy,
-    magnolia,
-  )
-)
 lazy val `zio-kafka-registry` = (project in file ("zio-kafka-registry"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++= Seq(

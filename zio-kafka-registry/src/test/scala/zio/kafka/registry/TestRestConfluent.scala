@@ -9,5 +9,5 @@ object TestRestConfluent extends DefaultRunnableSpec(
   suite("test rest  interface")(
     allTests :_*
 
-  ).provideManagedShared(embeddedConfluentKafkaEnvironment) // @@ sequential
+  ).provideManagedShared(embeddedConfluentKafkaEnvironment) @@ sequential
 )

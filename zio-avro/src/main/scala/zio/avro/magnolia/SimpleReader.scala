@@ -1,7 +1,7 @@
 package zio.avro.magnolia
 
 import java.nio.ByteBuffer
-import java.time.{Instant, LocalDate, LocalDateTime, LocalTime, ZoneId, ZonedDateTime}
+import java.time.{Instant, LocalDate, LocalDateTime, LocalTime, ZonedDateTime}
 
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericData

@@ -6,14 +6,16 @@ import io.confluent.kafka.schemaregistry.client.security.basicauth.BasicAuthCred
 import io.confluent.kafka.schemaregistry.client.security.bearerauth.BearerAuthCredentialProvider
 import javax.net.ssl.SSLSocketFactory
 import org.apache.avro.Schema
-import zio.{IO, RIO, Semaphore, Task, ZIO}
+import zio.{RIO, Semaphore, Task, ZIO}
 import zio.blocking._
 
-import scala.collection.JavaConverters._
 
 /**
  * Wrapper for RestService config (security) settings. See relevant docs for
- * io.confluent.kafka.schemaregistry.client.rest.RestService
+ * io.confluent.kafka.schemaregistry.client.rest.RestService (if you can find any!)
+ *
+ * In order to set security you should create a ConfluentClientService and then call the required method
+ * on the ConfluentClientService#confluentRestService object
  */
 trait ConfluentRestService {
   type RestConfigResponse[T] = RIO[Blocking, T]
@@ -22,21 +24,27 @@ trait ConfluentRestService {
 
   private[registry] val jrs: RestService
 
+  /**
+   * for use with ssl
+   * @param sslSocketFactory
+   * @return
+   */
   def setSslSocketFactory(sslSocketFactory: SSLSocketFactory): RestConfigResponse[Unit] =
     sem.withPermit(
       effectBlocking(jrs.setSslSocketFactory(sslSocketFactory))
     )
 
+  /** for use with basic auth */
   def setBasicAuthCredentialProvider(basicAuthCredentialProvider: BasicAuthCredentialProvider) : RestConfigResponse[Unit] =
     sem.withPermit(
       effectBlocking(jrs.setBasicAuthCredentialProvider(basicAuthCredentialProvider)))
 
-
+  /** for use with bearer auth */
   def setBearerAuthCredentialProvider(bearerAuthCredentialProvider: BearerAuthCredentialProvider) : RestConfigResponse[Unit] =
     sem.withPermit(
       effectBlocking(jrs.setBearerAuthCredentialProvider(bearerAuthCredentialProvider)))
 
-
+  /** http headers to go to schema registry server  */
   def setHttpHeaders(httpHeaders: util.Map[String, String]) : RestConfigResponse[Unit] =
     sem.withPermit(
       effectBlocking(jrs.setHttpHeaders(httpHeaders)))

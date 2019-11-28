@@ -11,6 +11,7 @@ object Settings {
   sealed trait SubjectNameStrategy {
     def strategyClassName: String
   }
+
   case object TopicNameStrategy extends SubjectNameStrategy {
     override val strategyClassName: String = classOf[TopicNameStrategy].getName
   }
@@ -20,6 +21,11 @@ object Settings {
   case object TopicRecordNameStrategy extends SubjectNameStrategy {
     override val strategyClassName: String = classOf[TopicRecordNameStrategy].getName
   }
+
+  /**
+   * allows creation of a custom strategy
+   * @param strategyClassName the class of the strategy interface
+   */
   case class CustomStrategy(strategyClassName: String) extends SubjectNameStrategy
 
 }

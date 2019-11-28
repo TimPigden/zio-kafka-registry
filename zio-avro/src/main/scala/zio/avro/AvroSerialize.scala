@@ -9,7 +9,7 @@ import zio._
 import zio.avro.magnolia.{AvroCompiler, AvroReader, AvroWriter, SchemaGenerator}
 import zio.blocking.{blocking, effectBlocking}
 
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.collection.mutable.ListBuffer
 
 object AvroSerialize  {
 

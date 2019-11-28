@@ -25,7 +25,6 @@ object Serializers {
       JField("error_code", JInt(errorCode)) <- jobj
       JField("message", JString(message)) <- jobj
     } yield {
-      println(s"got error stuff $s")
       SchemaError(errorCode.toInt, message)
     }).head
   }
@@ -36,12 +35,9 @@ object Serializers {
    * }
    */
   implicit def parseSchema(s: String): Task[Schema] = IO.effect {
-    println(s"incoming schema $s")
     val schemaString: String = (for {
       JObject(jobj) <- parse(s)
-      _ = println(s"jobj is $jobj")
       JField("schema", JString(schemaStrings)) <- jobj
-      _ = println(s"schema is $schemaStrings")
     } yield schemaStrings).head
     new Schema.Parser().parse(schemaString)
   }
@@ -102,7 +98,6 @@ object Serializers {
 }
 
   def parseCompatibilityLevel(asPut: Boolean)(s: String): Task[CompatibilityLevel] = IO.effect {
-    println(s"parseCompatibilityLevel $asPut of $s")
     val cString = if (asPut)
       "compatibility" else "compatibilityLevel"
     (for {

@@ -8,7 +8,7 @@ import zio.blocking._
 import zio.kafka.client.serde.{Deserializer, Serializer}
 
 import scala.reflect.ClassTag
-import com.sksamuel.avro4s.{AvroSchema, RecordFormat}
+import com.sksamuel.avro4s.RecordFormat
 
 object AvroSerdes {
 
