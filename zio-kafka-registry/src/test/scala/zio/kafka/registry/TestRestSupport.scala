@@ -1,17 +1,10 @@
 package zio.kafka.registry
 
-import zio.{UIO, URIO, ZIO}
-import zio.kafka.registry.rest.{AbstractClient, ConfluentClient, RestClient}
+import zio.ZIO
 import zio.test._
 import Assertion._
-import TestRestSupport._
-import KafkaTestUtils._
-import com.sksamuel
 import com.sksamuel.avro4s.{AvroSchema, RecordFormat}
-import zio.blocking.Blocking
-import zio.clock.Clock.Live
-import zio.duration.Duration
-import zio.kafka.registry.rest.RestClient.{Backward, BackwardTransitive, CompatibilityLevel, Forward, ForwardTransitive, Full, FullTransitive, NoCompatibilityLevel}
+import ConfluentRestService._
 
 object TestRestSupport {
   case class President1(name: String)
@@ -24,15 +17,6 @@ object TestRestSupport {
   val format1 = RecordFormat[President1]
   val format2 = RecordFormat[President2]
 
-
-  val confluentAllTests = new AllTests[Blocking, ConfluentClient[Blocking], ConfluentClient.Service[Blocking]] {
-    override def restClientService =
-      ZIO.environment[ConfluentClient[Blocking]].map {_.client}
-  }
-
-  trait AllTests[R <: Blocking, RC, RCS <: ConfluentClient.Service[R]] {
-    def restClientService: URIO[RC, RCS]
-
     def allTests = List(
      testSubjects,
       testDelete,
@@ -42,11 +26,11 @@ object TestRestSupport {
       compatibleSchemas
     )
 
-    val testSubjects
+    val testSubjects 
     = testM("test subjects empty then non-empty") {
       val subject = "presidents"
       for {
-        restClient <- restClientService
+        restClient <- ZIO.environment[ConfluentClient].map(_.confluentClient)
         initial <- restClient.subjects
         posted <- restClient.registerSchema(subject, schema1)
         already <- restClient.alreadyPresent(subject, schema1)
@@ -65,7 +49,7 @@ object TestRestSupport {
     val testDelete = testM("add then delete") {
       val subject = "morepresidents"
       for {
-        restClient <- restClientService
+        restClient <- ZIO.environment[ConfluentClient].map(_.confluentClient)
         initial <- restClient.subjects
         posted <- restClient.registerSchema(subject, schema1)
         later <- restClient.subjects
@@ -82,7 +66,7 @@ object TestRestSupport {
     val checkDeleteSubject = testM("delete whole subject") {
       val subject = "morepresidents2"
       for {
-        restClient <- restClientService
+        restClient <- ZIO.environment[ConfluentClient].map(_.confluentClient)
         posted <- restClient.registerSchema(subject, schema1)
         later <- restClient.subjects
         _ <- restClient.deleteSubject(subject)
@@ -97,7 +81,7 @@ object TestRestSupport {
     val multipleSchemas = testM("test with multiple schemas in same subject") {
       val subject = "presidents3"
       for {
-        restClient <- restClientService
+        restClient <- ZIO.environment[ConfluentClient].map(_.confluentClient)
         _ <- restClient.registerSchema(subject, schema1)
         _ <- restClient.setConfig(subject, Forward)
         _ <- restClient.registerSchema(subject, schema2)
@@ -110,7 +94,7 @@ object TestRestSupport {
     val compatibleSchemas = testM("schema1 and 2 are compatible") {
       val subject = "presidents4"
       for {
-        restClient <- restClientService
+        restClient <- ZIO.environment[ConfluentClient].map(_.confluentClient)
         _ <- restClient.registerSchema(subject, schema1)
         compat <- restClient.compatible(subject, 1, schema2)
       } yield {
@@ -125,7 +109,7 @@ object TestRestSupport {
 
       val subject = "presidentsModifyCompatibility"
 
-      def setCheck(restClient: ConfluentClient.Service[R], compat: CompatibilityLevel) =
+      def setCheck(restClient: ConfluentClientService, compat: CompatibilityLevel) =
         for {
           x <- restClient.setConfig(compat)
           _ = println(s"setConfig to $compat")
@@ -133,14 +117,15 @@ object TestRestSupport {
           _ = println(s"got back check result $check")
         } yield assert(check, equalTo(compat))
 
-      def setCheck2(restClient: ConfluentClient.Service[R], compat: CompatibilityLevel) =
+      def setCheck2(restClient: ConfluentClientService, compat: CompatibilityLevel) =
         for {
           _ <- restClient.setConfig(subject, compat)
           check <- restClient.config(subject)
         } yield assert(check, equalTo(compat))
 
       for {
-        restClient <- restClientService
+        restClient <- ZIO.environment[ConfluentClient].map(_.confluentClient)
+
         general <- ZIO.collectAll(CompatibilityLevel.values.keySet.map { compat => setCheck(restClient, compat) })
         bySubject <- ZIO.collectAll(CompatibilityLevel.values.keySet.map { compat => setCheck2(restClient, compat) })
       } yield {
@@ -148,7 +133,7 @@ object TestRestSupport {
       }
 
     }
-  }
+
 
 
 }

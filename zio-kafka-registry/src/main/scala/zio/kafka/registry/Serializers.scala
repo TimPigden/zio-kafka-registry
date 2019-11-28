@@ -1,12 +1,12 @@
-package zio.kafka.registry.rest
+package zio.kafka.registry
 
 import java.text.ParseException
 
 import org.apache.avro.Schema
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
-import zio.kafka.registry.rest.RestClient.{CompatibilityLevel, SchemaError, WrappedSchema}
 import zio._
+import zio.kafka.registry.ConfluentRestService.{CompatibilityLevel, SchemaError, WrappedSchema}
 /** serializers for kafka registry rest client.
  * NB, we assume that data coming from kafka registry is always in correct format
  * consequently our serializers fail with ParseException or equivalent for parsing json

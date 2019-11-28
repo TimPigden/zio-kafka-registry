@@ -60,7 +60,7 @@ lazy val Http4sVersion = "0.20.13"
 lazy val http4sBlazeClient = "org.http4s"  %% "http4s-blaze-client" % Http4sVersion % Test
 
 lazy val avro = "org.apache.avro" % "avro" % "1.9.1"
-lazy val avro4s = "com.sksamuel.avro4s" %% "avro4s-core" % "3.0.4" % "test"
+lazy val avro4s = "com.sksamuel.avro4s" %% "avro4s-core" % "3.0.4"
 lazy val snappy = "org.xerial.snappy" % "snappy-java" % "1.1.7.3"
 lazy val confluentSerializer = "io.confluent" % "kafka-avro-serializer" % "5.3.1"
 lazy val confluentRegistry = "io.confluent" % "kafka-schema-registry" % "5.3.1"

@@ -7,7 +7,7 @@ import zio.test.TestAspect._
 
 object TestRestConfluent extends DefaultRunnableSpec(
   suite("test rest  interface")(
-    confluentAllTests.allTests :_*
+    allTests :_*
 
-  ).provideManagedShared(kafkaEnvironmentConfluent(Kafka.makeEmbedded)) @@ sequential
+  ).provideManagedShared(embeddedConfluentKafkaEnvironment) // @@ sequential
 )

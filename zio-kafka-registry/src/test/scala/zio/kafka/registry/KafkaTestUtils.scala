@@ -16,11 +16,10 @@ import com.sksamuel.avro4s.{RecordFormat, ToRecord}
 import io.confluent.kafka.serializers.{AbstractKafkaAvroSerDeConfig, KafkaAvroSerializer}
 import org.apache.avro.generic.GenericRecord
 import zio.kafka.client._
-import zio.kafka.registry.rest.{AbstractClient, ConfluentClient, RestClient}
-import io.confluent.kafka.schemaregistry.client.rest.{RestService => ConfluentRestService}
-import org.apache.avro.Schema
 import zio.kafka.registry.Settings.RecordNameStrategy
 import zio.test.TestFailure
+
+import scala.reflect.ClassTag
 
 trait Kafka {
   def kafka: Kafka.Service
@@ -61,7 +60,7 @@ object Kafka {
       override val kafka: Service = DefaultLocal
     }))(_.kafka.stop())
 
-  type KafkaTestEnvironment = Kafka with TestEnvironment
+  type KafkaTestEnvironment = Kafka with TestEnvironment with ConfluentClient
 
   type KafkaClockBlocking = Kafka with Clock with Blocking
 
@@ -85,7 +84,7 @@ object KafkaTestUtils {
     for {
       testEnvironment <- TestEnvironment.Value
       kafkaS          <- kafkaE
-      sem <- ZManaged.fromEffect(Semaphore.make(1L))
+      cc <- Managed.fromEffect(ConfluentClientService.create(kafkaS.kafka.registryServer, 1000))
     } yield new TestEnvironment(
       testEnvironment.blocking,
       testEnvironment.clock,
@@ -94,12 +93,9 @@ object KafkaTestUtils {
       testEnvironment.random,
       testEnvironment.sized,
       testEnvironment.system
-    ) with Kafka with ConfluentClient[Blocking] {
+    )  with ConfluentClient with Kafka {
       val kafka = kafkaS.kafka
-      val client = {
-        val confluentService = new ConfluentRestService(kafka.registryServer)
-        ConfluentClientImpl(confluentService, RecordNameStrategy, kafka.registryServer, sem).client
-      }
+      val confluentClient = cc
     }
 
   val embeddedConfluentKafkaEnvironment =
@@ -116,14 +112,12 @@ object KafkaTestUtils {
     } yield ProducerSettings(
       servers,
       5.seconds,
-      Map(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG -> registry,
-        AbstractKafkaAvroSerDeConfig.VALUE_SUBJECT_NAME_STRATEGY-> "io.confluent.kafka.serializers.subject.RecordNameStrategy")
+      Map.empty
     )
 
   def withProducer[A, K, V](    kSerde: Serializer[Any, K],
                                 vSerde: Serializer[Any with Blocking, V]
-                           )(r: Producer[Any with Blocking, K, V] => RIO[Any with Clock with Kafka with Blocking, A],
-  ): RIO[KafkaTestEnvironment, A] =
+                           )(r: Producer[Any with Blocking, K, V] => RIO[Any with Clock with Kafka with Blocking, A]) =
     for {
       settings <- registryProducerSettings
       producer = Producer.make(settings, kSerde, vSerde)
@@ -137,7 +131,8 @@ object KafkaTestUtils {
                                   (r: Producer[Any with Blocking, String, GenericRecord] => RIO[Any with Clock with Kafka with Blocking, A]
                                   ) = {
     for {
-      serializer <-  ZIO.environment[ConfluentClient[Blocking]].map {_.client.avroSerializer}
+      client <-  ZIO.environment[ConfluentClient]
+      serializer <- client.confluentClient.avroSerializer(RecordNameStrategy)
       producing <-  withProducer[A, String, GenericRecord](Serde.string, serializer)(r)
     } yield producing
   }
@@ -154,28 +149,14 @@ object KafkaTestUtils {
       Map(
         ConsumerConfig.AUTO_OFFSET_RESET_CONFIG -> "earliest",
         ConsumerConfig.METADATA_MAX_AGE_CONFIG  -> "100",
-        AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG -> registry
       ),
       250.millis,
       250.millis,
       1
     )
 
-  def consumeWithStrings(groupId: String, clientId: String, subscription: Subscription)(
-    r: (String, String) => ZIO[Any with Kafka with Clock with Blocking, Nothing, Unit]
-  ): RIO[KafkaTestEnvironment, Unit] =
-    for {
-      lcb <- Kafka.liveClockBlocking
-      inner <- (for {
-                settings <- consumerSettings(groupId, clientId)
-                consumed <- Consumer.consumeWith(settings, subscription, Serde.string, Serde.string)(r)
-              } yield consumed)
-                .provide(lcb)
-    } yield inner
-
-  def withConsumer[A](groupId: String, clientId: String)(
-    r: Consumer => RIO[Any with Kafka with Clock with Blocking, A]
-  ): RIO[KafkaTestEnvironment, A] =
+  def withConsumer[A : ClassTag](groupId: String, clientId: String)(
+    r: Consumer => RIO[Any with Kafka with Clock with Blocking, A]) =
     for {
       lcb <- Kafka.liveClockBlocking
       inner <- (for {
