@@ -5,8 +5,8 @@ name := "zio-kafka-registry"
 credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
 
 inThisBuild(Seq(
-  version := "0.1.0",
-  isSnapshot := true,
+  version := "0.1.1",
+  isSnapshot := false,
   scalaVersion := "2.12.10",
   resolvers += "confluent" at "https://packages.confluent.io/maven/",
   useCoursier := false
@@ -48,7 +48,7 @@ val squants = "org.typelevel"  %% "squants"  % "1.3.0"
 val magnolia = "com.propensive" %% "magnolia" % "0.12.0"
 lazy val `zio-version` = "1.0.0-RC17"
 lazy val `zio-interop` = "2.0.0.0-RC8"
-lazy val `zio-kafka-version` = "0.4.1" // dummy version to pick up local library
+lazy val `zio-kafka-version` = "0.4.0" // dummy version to pick up local library
 lazy val zio = "dev.zio" %% "zio" %  `zio-version`
 lazy val `zio-kafka` = "dev.zio" %% "zio-kafka"   % `zio-kafka-version`
 lazy val `zio-test` = "dev.zio" %% "zio-test" % `zio-version` % "test"
@@ -69,7 +69,7 @@ lazy val confluentRegistry = "io.confluent" % "kafka-schema-registry" % "5.3.1"
 lazy val commonSettings = Seq(
   parallelExecution in Test := false,
   scalacOptions ++= myScalacOptions,
-  organization := "com.optrak",
+  organization := "org.timpigden",
 )
 
 lazy val `zio-kafka-registry` = (project in file ("zio-kafka-registry"))
