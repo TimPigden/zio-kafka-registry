@@ -57,9 +57,6 @@ lazy val `zio-interop-cats` = "dev.zio" %% "zio-interop-cats" % `zio-interop`
 lazy val `embedded-kafka-schema` = "io.github.embeddedkafka" %% "embedded-kafka-schema-registry" % "5.3.1" % "test" exclude("io.github.embbeddedkafka", "embedded-kafka-streams")
 lazy val `embedded-kafka` = "io.github.embeddedkafka" %% "embedded-kafka" % "2.3.1" % "test"
 
-lazy val Http4sVersion = "0.20.13"
-lazy val http4sBlazeClient = "org.http4s"  %% "http4s-blaze-client" % Http4sVersion % Test
-
 lazy val avro = "org.apache.avro" % "avro" % "1.9.1"
 lazy val avro4s = "com.sksamuel.avro4s" %% "avro4s-core" % "3.0.4"
 lazy val snappy = "org.xerial.snappy" % "snappy-java" % "1.1.7.3"
@@ -86,7 +83,6 @@ lazy val `zio-kafka-registry` = (project in file ("zio-kafka-registry"))
     `embedded-kafka`,
     `embedded-kafka-schema`,
     snappy,
-    http4sBlazeClient,
     confluentSerializer,
     confluentRegistry
   )

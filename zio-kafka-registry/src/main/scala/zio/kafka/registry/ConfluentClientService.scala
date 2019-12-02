@@ -297,7 +297,7 @@ object ConfluentClientService {
  * Module pattern for ConfluentClientService
  */
 trait ConfluentClient {
-  def confluentClient: ConfluentClientService
+  val confluentClient: ConfluentClientService
 }
 
 object ConfluentClient {
@@ -312,7 +312,7 @@ object ConfluentClient {
   def make[R <: Blocking](url: String,
                           identityMapCapacity: Int): ZManaged[R, Throwable, ConfluentClient] =
     ZManaged.fromEffect(ConfluentClientService.create(url, identityMapCapacity).map { z => new ConfluentClient {
-      override def confluentClient: ConfluentClientService = z
+      override val confluentClient: ConfluentClientService = z
     }}
   )
 
