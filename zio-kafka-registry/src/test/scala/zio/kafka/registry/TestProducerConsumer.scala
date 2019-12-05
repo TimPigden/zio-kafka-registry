@@ -12,13 +12,11 @@ import zio.kafka.client.serde.Serde
 import zio.kafka.registry.Kafka.KafkaTestEnvironment
 import zio.kafka.registry.Settings.RecordNameStrategy
 
-object TestProducerConsumer extends DefaultRunnableSpec(
-  suite("test producing with avro serializer")(
+object TestProducerConsumer extends DefaultRunnableSpec {
+  def spec = suite("test producing with avro serializer")(
     testPresident
-  )
-.provideManagedShared(embeddedConfluentKafkaEnvironment) @@ sequential
-)
-
+  ).provideSomeManagedShared(embeddedConfluentKafkaEnvironment) @@ sequential
+}
 
 object TestProducerSupport{
   val topic = "presidents"

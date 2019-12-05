@@ -10,10 +10,11 @@ import zio.kafka.client.serde.{Serde, Serializer}
 import zio.duration._
 import zio.kafka.client.KafkaAdmin.KafkaAdminClientConfig
 import zio.random.Random
-import zio.test.environment.{Live, TestEnvironment}
+import zio.test.environment.TestEnvironment
 import com.sksamuel.avro4s.RecordFormat
 import org.apache.avro.generic.GenericRecord
 import zio.kafka.client._
+import zio.kafka.registry.Kafka.KafkaTestEnvironment
 import zio.kafka.registry.Settings.RecordNameStrategy
 import zio.test.TestFailure
 
@@ -60,27 +61,13 @@ object Kafka {
 
   type KafkaTestEnvironment = Kafka with TestEnvironment with ConfluentClient
 
-  type KafkaClockBlocking = Kafka with Clock with Blocking
-
-  def liveClockBlocking: ZIO[KafkaTestEnvironment, Nothing, KafkaClockBlocking] =
-    for {
-      clck    <- Live.live(ZIO.environment[Clock])
-      blcking <- ZIO.environment[Blocking]
-      kfka    <- ZIO.environment[Kafka]
-    } yield new Kafka with Clock with Blocking {
-      override val kafka: Service = kfka.kafka
-
-      override val clock: Clock.Service[Any]       = clck.clock
-      override val blocking: Blocking.Service[Any] = blcking.blocking
-    }
-
 }
 
 object KafkaRegistryTestUtils {
 
   def kafkaEnvironmentConfluent(kafkaE: Managed[Nothing, Kafka]) =
     for {
-      testEnvironment <- TestEnvironment.Value
+      testEnvironment <- ZManaged.access[TestEnvironment](_.withLiveClock)
       kafkaS          <- kafkaE
       cc <- Managed.fromEffect(ConfluentClientService.create(kafkaS.kafka.registryServer, 1000))
     } yield new TestEnvironment(
@@ -115,18 +102,15 @@ object KafkaRegistryTestUtils {
 
   def withProducer[A, K, V](    kSerde: Serializer[Any, K],
                                 vSerde: Serializer[Any with Blocking, V]
-                           )(r: Producer[Any with Blocking, K, V] => RIO[Any with Clock with Kafka with Blocking, A]) =
+                           )(r: Producer[Any with Blocking, K, V] => RIO[KafkaTestEnvironment, A]) =
     for {
       settings <- registryProducerSettings
       producer = Producer.make(settings, kSerde, vSerde)
-      lcb      <- Kafka.liveClockBlocking
-      produced <- producer.use { p =>
-                   r(p).provide(lcb)
-                 }
+      produced <- producer.use ( p => r(p))
     } yield produced
 
   def withProducerAvroRecord[A, V](recordFormat: RecordFormat[V])
-                                  (r: Producer[Any with Blocking, String, GenericRecord] => RIO[Any with Clock with Kafka with Blocking, A]
+                                  (r: Producer[Any with Blocking, String, GenericRecord] => RIO[KafkaTestEnvironment, A]
                                   ) = {
     for {
       client <-  ZIO.environment[ConfluentClient]
@@ -156,15 +140,10 @@ object KafkaRegistryTestUtils {
   def withConsumer[A : ClassTag](groupId: String, clientId: String)(
     r: Consumer => RIO[Any with Kafka with Clock with Blocking, A]) =
     for {
-      lcb <- Kafka.liveClockBlocking
-      inner <- (for {
-                settings <- consumerSettings(groupId, clientId)
-                consumer = Consumer.make(settings)
-                consumed <- consumer.use { p =>
-                             r(p).provide(lcb)
-                           }
-              } yield consumed).provide(lcb)
-    } yield inner
+      settings <- consumerSettings(groupId, clientId)
+      consumer = Consumer.make(settings)
+      consumed <- consumer.use(p => r(p))
+    } yield consumed
 
   def adminSettings =
     for {
@@ -174,13 +153,11 @@ object KafkaRegistryTestUtils {
   def withAdmin[T](f: AdminClient => RIO[Any with Clock with Kafka with Blocking, T]) =
     for {
       settings <- adminSettings
-      lcb      <- Kafka.liveClockBlocking
       fRes <- AdminClient
                .make(settings)
                .use { client =>
                  f(client)
                }
-               .provide(lcb)
     } yield fRes
 
   // temporary workaround for zio issue #2166 - broken infinity

@@ -5,9 +5,9 @@ import zio.kafka.registry.TestRestSupport._
 import zio.test._
 import zio.test.TestAspect._
 
-object TestRestConfluent extends DefaultRunnableSpec(
-  suite("test rest  interface")(
-    allTests :_*
+object TestRestConfluent extends DefaultRunnableSpec {
+  def spec = suite("test rest  interface")(
+    allTests: _*
 
-  ).provideManagedShared(embeddedConfluentKafkaEnvironment) @@ sequential
-)
+  ).provideSomeManagedShared(embeddedConfluentKafkaEnvironment) @@ sequential
+}

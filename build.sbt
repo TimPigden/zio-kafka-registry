@@ -46,22 +46,25 @@ val squants = "org.typelevel"  %% "squants"  % "1.3.0"
 
 // val magnolia = "com.softwaremill" %% "magnolia" % "0.11.0-sml"
 val magnolia = "com.propensive" %% "magnolia" % "0.12.0"
-lazy val `zio-version` = "1.0.0-RC17"
-lazy val `zio-interop` = "2.0.0.0-RC8"
-lazy val `zio-kafka-version` = "0.4.0" // dummy version to pick up local library
-lazy val zio = "dev.zio" %% "zio" %  `zio-version`
-lazy val `zio-kafka` = "dev.zio" %% "zio-kafka"   % `zio-kafka-version`
-lazy val `zio-test` = "dev.zio" %% "zio-test" % `zio-version` % "test"
-lazy val `zio-test-sbt` = "dev.zio" %% "zio-test-sbt" % `zio-version` % "test"
-lazy val `zio-interop-cats` = "dev.zio" %% "zio-interop-cats" % `zio-interop`
-lazy val `embedded-kafka-schema` = "io.github.embeddedkafka" %% "embedded-kafka-schema-registry" % "5.3.1" % "test" exclude("io.github.embbeddedkafka", "embedded-kafka-streams")
-lazy val `embedded-kafka` = "io.github.embeddedkafka" %% "embedded-kafka" % "2.3.1" % "test"
+lazy val zioVersion           = "1.0.0-RC17+94-fa044641"
+lazy val zioKafkaVersion           = "0.4.1+34-69f19fa2"
+lazy val embeddedKafkaVersion = "2.4.0-SNAPSHOT"
+lazy val embeddedKafkaRegistryVersion = "5.4.0-SNAPSHOT"
+lazy val zio = "dev.zio" %% "zio" %  `zioVersion`
+lazy val `zio-kafka` = "dev.zio" %% "zio-kafka"   % zioKafkaVersion
+lazy val `zio-test` = "dev.zio" %% "zio-test" % `zioVersion` % "test"
+lazy val `zio-test-sbt` = "dev.zio" %% "zio-test-sbt" % `zioVersion` % "test"
+lazy val `embedded-kafka-schema` = "io.github.embeddedkafka" %% "embedded-kafka-schema-registry" % embeddedKafkaRegistryVersion % "test"
+lazy val `embedded-kafka-streams` = "io.github.embeddedkafka" %% "embedded-kafka-schema-streams" % embeddedKafkaVersion % "test"
+lazy val kafkaVersion         = "2.3.1"
 
 lazy val avro = "org.apache.avro" % "avro" % "1.9.1"
 lazy val avro4s = "com.sksamuel.avro4s" %% "avro4s-core" % "3.0.4"
 lazy val snappy = "org.xerial.snappy" % "snappy-java" % "1.1.7.3"
 lazy val confluentSerializer = "io.confluent" % "kafka-avro-serializer" % "5.3.1"
 lazy val confluentRegistry = "io.confluent" % "kafka-schema-registry" % "5.3.1"
+lazy val kafkaClients = "org.apache.kafka" % "kafka-clients" % kafkaVersion
+lazy val kafka = "org.apache.kafka" %% "kafka" % kafkaVersion
 
 lazy val commonSettings = Seq(
   parallelExecution in Test := false,
@@ -75,12 +78,10 @@ lazy val `zio-kafka-registry` = (project in file ("zio-kafka-registry"))
     json4s,
     avro,
     zio,
-    `zio-interop-cats`,
-    catsEffect,
+    kafka,
     `zio-test`,
     `zio-kafka`,
     avro4s,
-    `embedded-kafka`,
     `embedded-kafka-schema`,
     snappy,
     confluentSerializer,
