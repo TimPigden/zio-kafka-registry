@@ -46,8 +46,8 @@ val squants = "org.typelevel"  %% "squants"  % "1.3.0"
 
 // val magnolia = "com.softwaremill" %% "magnolia" % "0.11.0-sml"
 val magnolia = "com.propensive" %% "magnolia" % "0.12.0"
-lazy val zioVersion           = "1.0.0-RC17+94-fa044641"
-lazy val zioKafkaVersion           = "0.4.1+34-69f19fa2"
+lazy val zioVersion           = "1.0.0-RC17+95-e10fe4c0"
+lazy val zioKafkaVersion           = "0.4.1+34-69f19fa2+20191205-1812"
 lazy val embeddedKafkaVersion = "2.4.0-SNAPSHOT"
 lazy val embeddedKafkaRegistryVersion = "5.4.0-SNAPSHOT"
 lazy val zio = "dev.zio" %% "zio" %  `zioVersion`
